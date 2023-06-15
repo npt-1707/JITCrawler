@@ -12,20 +12,20 @@ class RepositoryExtractor:
         self.repo = g.get_repo(f"{owner}/{name}")
         self.clone_path = os.path.join(path, "repo", owner)
         self.repo_path = os.path.join(self.clone_path, name)
-        self.save_path = os.path.join(path, "save", owner)
-        self.features_path = os.path.join(
-            self.save_path, f"features_{name}_{end}.pkl")
+        self.save_path = os.path.join(path, "save")
         self.commits_path = os.path.join(
             self.save_path, f"commits_{name}_{end}.pkl")
-        self.files_path = os.path.join(
-            self.save_path, f"files_{name}_{end}.pkl")
-        self.authors_path = os.path.join(
-            self.save_path, f"authors_{name}_{end}.pkl")
-        self.csv_path = os.path.join(self.save_path, f"{name}_{end}.csv")
+        # self.features_path = os.path.join(
+        #     self.save_path, f"features_{name}_{end}.pkl")
+        # self.files_path = os.path.join(
+        #     self.save_path, f"files_{name}_{end}.pkl")
+        # self.authors_path = os.path.join(
+        #     self.save_path, f"authors_{name}_{end}.pkl")
+        self.csv_path = os.path.join(self.save_path, f"{owner}_{name}_{end}.csv")
         if not os.path.exists(self.clone_path):
             os.makedirs(self.clone_path)
-        if not os.path.exists(os.path.join(path, "save", owner)):
-            os.makedirs(os.path.join(path, "save", owner))
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
         # clone the repository
         os.chdir(self.clone_path)
         clone_repo(self.clone_path, self.repo.name, self.repo.clone_url)
@@ -45,13 +45,17 @@ class RepositoryExtractor:
             with open(self.commits_path, "rb") as f:
                 self.commits = pickle.load(f)
 
-        if os.path.exists(self.files_path):
-            with open(self.files_path, "rb") as f:
-                self.files = pickle.load(f)
+        # if os.path.exists(self.files_path):
+        #     with open(self.files_path, "rb") as f:
+        #         self.files = pickle.load(f)
 
-        if os.path.exists(self.authors_path):
-            with open(self.authors_path, "rb") as f:
-                self.authors = pickle.load(f)
+        # if os.path.exists(self.authors_path):
+        #     with open(self.authors_path, "rb") as f:
+        #         self.authors = pickle.load(f)
+                
+        # if os.path.exists(self.features_path):
+        #     with open(self.features_path, "rb") as f:
+        #         self.features = pickle.load(f)
 
         # get main language
         self.language = self.repo.language
@@ -61,13 +65,13 @@ class RepositoryExtractor:
             languages = [self.language]
         else:
             languages = []
-        print("Collecting commits information")
+        print("Collecting commits information ...")
         for commit_id in tqdm(self.commit_ids):
             if commit_id not in self.commits:
                 commit = get_commit_info(commit_id, languages)
                 if not commit["diff"]:
                     continue
-                self.commits[commit["commit_id"]] = commit
+                self.commits[commit_id] = commit
 
         with open(self.commits_path, "wb") as f:
             pickle.dump(self.commits, f)
@@ -123,11 +127,13 @@ class RepositoryExtractor:
             nuc += file_nuc
 
             file["nuc"] = file_nuc
+            self.files[file_path] = file
 
             if file_path in author_exp:
                 author_exp[file_path].append(commit_date)
             else:
                 author_exp[file_path] = [commit_date]
+            self.authors[commit_author] = author_exp
 
         feature = {
             "_id": commit_id,
@@ -150,16 +156,17 @@ class RepositoryExtractor:
         return feature
 
     def extrac_repo_k_features(self):
-        for commit_id in tqdm(self.commit_ids):
+        print("Extracting features ...")
+        for commit_id in tqdm(self.commits):
             if commit_id not in self.features:
                 k_features = self.extract_k_features(commit_id)
                 self.features[commit_id] = k_features
 
-        with open(self.files_path, "wb") as f:
-            pickle.dump(self.files, f)
+        # with open(self.files_path, "wb") as f:
+        #     pickle.dump(self.files, f)
 
-        with open(self.authors_path, "wb") as f:
-            pickle.dump(self.authors, f)
+        # with open(self.authors_path, "wb") as f:
+        #     pickle.dump(self.authors, f)
 
     def to_csv(self):
         print("Saving features to CSV...", end=" ")

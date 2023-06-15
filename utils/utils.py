@@ -1,7 +1,8 @@
 import os
 import math
-from line_parser import parse_lines
-from aggregator import aggregator
+from utils.line_parser import parse_lines
+from utils.aggregator import aggregator
+import subprocess
 
 
 def clone_repo(clone_path, name, url):
@@ -13,15 +14,21 @@ def clone_repo(clone_path, name, url):
         os.system(command.format(url))
     else:
         print(f"Existed '{name}' repository")
+        command = "git pull"
+        os.system(command)
 
 
 def exec_cmd(command):
     """
     Get ouput of executing a command
     """
-    pip = os.popen(command)
-    output = pip.buffer.read().decode(encoding="utf8", errors="ignore")
-    output = output.strip("\n").split("\n") if output else []
+    # pip = os.popen(command)
+    # output = pip.buffer.read().decode(encoding="utf8", errors="ignore")
+    # output = output.strip("\n").split("\n") if output else []
+    # return output
+    result = subprocess.run(command, shell=True, capture_output=True, text=False)
+    output = result.stdout.strip(b"\n").split(b"\n") if result.stdout else []
+    output = [line.decode(encoding="utf8", errors="replace") for line in output]
     return output
 
 
@@ -319,21 +326,21 @@ def get_programming_language(file_path):
         ".java": "Java",
         ".cpp": "C++",
         ".c": "C",
-        ".html": "HTML",
-        ".css": "CSS",
         ".js": "JavaScript",
-        ".php": "PHP",
         ".rb": "Ruby",
         ".swift": "Swift",
         ".go": "Go",
         ".rs": "Rust",
         ".ts": "TypeScript",
-        ".pl": "Perl",
-        ".sh": "Bash",
-        ".lua": "Lua",
-        ".sql": "SQL",
-        ".cc": "C++",
-        ".h": "C",
+        # ".php": "PHP",
+        # ".html": "HTML",
+        # ".css": "CSS",
+        # ".pl": "Perl",
+        # ".sh": "Bash",
+        # ".lua": "Lua",
+        # ".sql": "SQL",
+        # ".cc": "C++",
+        # ".h": "C",
         # Add more extensions and programming languages as needed
     }
 

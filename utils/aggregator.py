@@ -1,5 +1,3 @@
-import line_parser
-
 def aggregator(parsed_lines_iterable):
     def set_once(root, path, value):
         original_path = list(path)

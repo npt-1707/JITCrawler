@@ -15,11 +15,11 @@ g = Github(github_access_token)
 if not os.path.exists("repo"):
     os.mkdir("repo")
 
-end = "2023-05-01"
+before = "2023-05-01"
 for line in lines:
     print(line)
     owner, name = line.split("/")
-    extractor = RepositoryExtractor(g, owner, name, ORG_DIR, end)
+    extractor = RepositoryExtractor(g, owner, name, ORG_DIR, before)
     extractor.get_repo_commits_info(main_language_only=True)
     extractor.extrac_repo_k_features()
     extractor.to_csv()
