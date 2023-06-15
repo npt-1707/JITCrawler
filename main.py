@@ -16,7 +16,7 @@ if not os.path.exists("repo"):
     os.mkdir("repo")
 
 end = "2023-05-01"
-for line in lines[:1]:
+for line in lines:
     print(line)
     owner, name = line.split("/")
     extractor = RepositoryExtractor(g, owner, name, ORG_DIR, end)

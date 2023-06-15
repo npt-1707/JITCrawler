@@ -13,10 +13,14 @@ class RepositoryExtractor:
         self.clone_path = os.path.join(path, "repo", owner)
         self.repo_path = os.path.join(self.clone_path, name)
         self.save_path = os.path.join(path, "save", owner)
-        self.features_path = os.path.join(self.save_path, f"features_{name}_{end}.pkl")
-        self.commits_path = os.path.join(self.save_path, f"commits_{name}_{end}.pkl")
-        self.files_path = os.path.join(self.save_path, f"files_{name}_{end}.pkl")
-        self.authors_path = os.path.join(self.save_path, f"authors_{name}_{end}.pkl")
+        self.features_path = os.path.join(
+            self.save_path, f"features_{name}_{end}.pkl")
+        self.commits_path = os.path.join(
+            self.save_path, f"commits_{name}_{end}.pkl")
+        self.files_path = os.path.join(
+            self.save_path, f"files_{name}_{end}.pkl")
+        self.authors_path = os.path.join(
+            self.save_path, f"authors_{name}_{end}.pkl")
         self.csv_path = os.path.join(self.save_path, f"{name}_{end}.csv")
         if not os.path.exists(self.clone_path):
             os.makedirs(self.clone_path)
@@ -59,7 +63,7 @@ class RepositoryExtractor:
             languages = []
         print("Collecting commits information")
         for commit_id in tqdm(self.commit_ids):
-            if commit_id not in commit:
+            if commit_id not in self.commits:
                 commit = get_commit_info(commit_id, languages)
                 if not commit["diff"]:
                     continue

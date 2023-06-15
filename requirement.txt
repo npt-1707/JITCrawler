@@ -1,5 +1,0 @@
-numpy
-pandas
-pygithub
-tqdm
-pickle
