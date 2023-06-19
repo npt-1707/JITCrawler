@@ -3,6 +3,7 @@ import math
 from utils.line_parser import parse_lines
 from utils.aggregator import aggregator
 import subprocess
+import re
 
 
 def clone_repo(clone_path, name, url):
@@ -59,14 +60,22 @@ def split_diff_log(file_diff_log):
     return files_log
 
 
+def is_numeric_string(string):
+    # Regular expression pattern to match decimal numbers
+    pattern = r"^[+-]?\d*\.?\d+$"
+
+    # Check if the string matches the pattern
+    return re.match(pattern, string) is not None
+
+
 def process_one_line_blame(log):
     log = log.split()
     blame_id = log[0]
-    while not log[1].isnumeric():
+    while not is_numeric_string(log[1]):
         log.remove(log[1])
     blame_line_a = int(log[1])
     for idx, word in enumerate(log[2:]):
-        if word.isnumeric():
+        if is_numeric_string(word):
             break
     idx = idx + 2
     blame_date = int(log[idx])
@@ -260,7 +269,8 @@ def calc_entrophy(totalLOCModified, locModifiedPerFile):
 
 
 def check_fix(msg):
-    bug_keywords = ["fix", "bug", "issue"]  # List of keywords indicating bug fixes
+    # List of keywords indicating bug fixes
+    bug_keywords = ["fix", "bug", "issue"]
     wrong_keywords = ["fix typo", "fix build", "non-fix"]
     if any(keyword in msg for keyword in bug_keywords):
         if not any(keyword in msg for keyword in wrong_keywords):
