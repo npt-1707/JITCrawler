@@ -1,7 +1,9 @@
 import re
 
-FILE_DIFF_HEADER =[re.compile(r"^diff --git a/(?P<from_file>.*?)\s* b/(?P<to_file>.*?)\s*$"), 
-    re.compile(r'^diff --git "a/(?P<from_file>.*?)"\s* "b/(?P<to_file>.*?)"\s*$')]
+FILE_DIFF_HEADER = [
+    re.compile(r"^diff --git a/(?P<from_file>.*?)\s* b/(?P<to_file>.*?)\s*$"),
+    re.compile(r'^diff --git "a/(?P<from_file>.*?)"\s* "b/(?P<to_file>.*?)"\s*$'),
+]
 OLD_MODE_HEADER = re.compile(r"^old mode (?P<mode>\d+)$")
 NEW_MODE_HEADER = re.compile(r"^new mode (?P<mode>\d+)$")
 NEW_FILE_MODE_HEADER = re.compile(r"^new file mode (?P<mode>\d+)$")
@@ -9,11 +11,16 @@ DELETED_FILE_MODE_HEADER = re.compile(r"^deleted file mode (?P<mode>\d+)$")
 INDEX_DIFF_HEADER = re.compile(
     r"^index (?P<from_blob>.*?)\.\.(?P<to_blob>.*?)(?: (?P<mode>\d+))?$"
 )
-BINARY_DIFF = re.compile(r"Binary files (?P<from_file>.*) and (?P<to_file>.*) differ$")
-A_FILE_CHANGE_HEADER = [re.compile(r"^--- (?:/dev/null|a/(?P<file>.*?)\s*)$"),
-                        re.compile(r'^--- (?:/dev/null|"a/(?P<file>.*?)"\s*)$')]
-B_FILE_CHANGE_HEADER = [re.compile(r"^\+\+\+ (?:/dev/null|b/(?P<file>.*?)\s*)$"),
-                        re.compile(r'^\+\+\+ (?:/dev/null|"b/(?P<file>.*?)"\s*)$')]
+BINARY_DIFF = re.compile(
+    r"Binary files (?P<from_file>.*) and (?P<to_file>.*) differ$")
+A_FILE_CHANGE_HEADER = [
+    re.compile(r"^--- (?:/dev/null|a/(?P<file>.*?)\s*)$"),
+    re.compile(r'^--- (?:/dev/null|"a/(?P<file>.*?)"\s*)$'),
+]
+B_FILE_CHANGE_HEADER = [
+    re.compile(r"^\+\+\+ (?:/dev/null|b/(?P<file>.*?)\s*)$"),
+    re.compile(r'^\+\+\+ (?:/dev/null|"b/(?P<file>.*?)"\s*)$'),
+]
 CHUNK_HEADER = re.compile(
     r"^@@ -(?P<from_line_start>\d+)(?:,(?P<from_line_count>\d+))? \+(?P<to_line_start>\d+)(?:,(?P<to_line_count>\d+))? @@(?P<line>.*)$"
 )
@@ -44,7 +51,8 @@ def parse_lines(line_iterable):
         try:
             state, parsed = parse_line(line, prev_state)
         except ParseError as parse_exc:
-            raise LineParseError("{} ({!r})".format(parse_exc, line), line_index + 1)
+            raise LineParseError("{} ({!r})".format(
+                parse_exc, line), line_index + 1)
         else:
             yield state, parsed, line
 
@@ -177,4 +185,5 @@ def parse_line(line, prev_state):
         else:
             raise ParseError("Expected line_diff or no_newline")
 
-    raise ParseError("Can't parse line with prev_state {!r}".format(prev_state))
+    raise ParseError(
+        "Can't parse line with prev_state {!r}".format(prev_state))
