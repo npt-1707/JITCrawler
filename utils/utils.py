@@ -27,9 +27,11 @@ def exec_cmd(command):
     # output = pip.buffer.read().decode(encoding="utf8", errors="ignore")
     # output = output.strip("\n").split("\n") if output else []
     # return output
-    result = subprocess.run(command, shell=True, capture_output=True, text=False)
+    result = subprocess.run(command, shell=True,
+                            capture_output=True, text=False)
     output = result.stdout.strip(b"\n").split(b"\n") if result.stdout else []
-    output = [line.decode(encoding="utf8", errors="replace") for line in output]
+    output = [line.decode(encoding="utf8", errors="replace")
+              for line in output]
     return output
 
 
@@ -140,7 +142,10 @@ def get_commit_info(commit_id, languages=[]):
     commit_blame = {}
     files = []
     for log in diff_log:
-        files_diff = aggregator(parse_lines(log))
+        try:
+            files_diff = aggregator(parse_lines(log))
+        except:
+            continue
         for file_diff in files_diff:
             file_name_a = (
                 file_diff["from"]["file"]
@@ -342,14 +347,14 @@ def get_programming_language(file_path):
         ".go": "Go",
         ".rs": "Rust",
         ".ts": "TypeScript",
-        # ".php": "PHP",
+        ".php": "PHP",
         # ".html": "HTML",
         # ".css": "CSS",
         # ".pl": "Perl",
         # ".sh": "Bash",
         # ".lua": "Lua",
         # ".sql": "SQL",
-        # ".cc": "C++",
+        ".cc": "C++",
         # ".h": "C",
         # Add more extensions and programming languages as needed
     }
