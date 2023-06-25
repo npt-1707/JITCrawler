@@ -2,15 +2,19 @@ import re
 
 FILE_DIFF_HEADER = [
     re.compile(r"^diff --git a/(?P<from_file>.*?)\s* b/(?P<to_file>.*?)\s*$"),
-    re.compile(r'^diff --git "a/(?P<from_file>.*?)"\s* "b/(?P<to_file>.*?)"\s*$'),
+    re.compile(
+        r'^diff --git "a/(?P<from_file>.*?)"\s* "b/(?P<to_file>.*?)"\s*$'),
+    re.compile(
+        r'^diff --git a/(?P<from_file>.*?)\s* "b/(?P<to_file>.*?)"\s*$'),
+    re.compile(
+        r'^diff --git "a/(?P<from_file>.*?)"\s* b/(?P<to_file>.*?)\s*$'),
 ]
 OLD_MODE_HEADER = re.compile(r"^old mode (?P<mode>\d+)$")
 NEW_MODE_HEADER = re.compile(r"^new mode (?P<mode>\d+)$")
 NEW_FILE_MODE_HEADER = re.compile(r"^new file mode (?P<mode>\d+)$")
 DELETED_FILE_MODE_HEADER = re.compile(r"^deleted file mode (?P<mode>\d+)$")
 INDEX_DIFF_HEADER = re.compile(
-    r"^index (?P<from_blob>.*?)\.\.(?P<to_blob>.*?)(?: (?P<mode>\d+))?$"
-)
+    r"^index (?P<from_blob>.*?)\.\.(?P<to_blob>.*?)(?: (?P<mode>\d+))?$")
 BINARY_DIFF = re.compile(
     r"Binary files (?P<from_file>.*) and (?P<to_file>.*) differ$")
 A_FILE_CHANGE_HEADER = [
@@ -36,12 +40,14 @@ class ParseError(Exception):
 
 
 class LineParseError(Exception):
+
     def __init__(self, message, line):
         self.line = line
         super(LineParseError, self).__init__(message)
 
     def __str__(self):
-        return "Line {}: {}".format(self.line, super(LineParseError, self).__str__())
+        return "Line {}: {}".format(self.line,
+                                    super(LineParseError, self).__str__())
 
 
 def parse_lines(line_iterable):
@@ -51,8 +57,8 @@ def parse_lines(line_iterable):
         try:
             state, parsed = parse_line(line, prev_state)
         except ParseError as parse_exc:
-            raise LineParseError("{} ({!r})".format(
-                parse_exc, line), line_index + 1)
+            raise LineParseError("{} ({!r})".format(parse_exc, line),
+                                 line_index + 1)
         else:
             yield state, parsed, line
 
@@ -60,13 +66,13 @@ def parse_lines(line_iterable):
 def parse_line(line, prev_state):
     # "diff --git a/{TO_FILE} b/{TO_FILE}""
     if prev_state in (
-        "start_of_file",
-        "new_mode_header",
-        "line_diff",
-        "no_newline",
-        "index_diff_header",
-        "binary_diff",
-        "rename_b_file",
+            "start_of_file",
+            "new_mode_header",
+            "line_diff",
+            "no_newline",
+            "index_diff_header",
+            "binary_diff",
+            "rename_b_file",
     ):
         matches = [pattern.search(line) for pattern in FILE_DIFF_HEADER]
         for match in matches:
@@ -103,11 +109,11 @@ def parse_line(line, prev_state):
 
     # "index {FROM_COMMIT} {TO_COMMIT} [{MODE}]"
     if prev_state in (
-        "rename_b_file",
-        "file_diff_header",
-        "new_mode_header",
-        "new_file_mode_header",
-        "deleted_file_mode_header",
+            "rename_b_file",
+            "file_diff_header",
+            "new_mode_header",
+            "new_file_mode_header",
+            "deleted_file_mode_header",
     ):
         match = RENAME_HEADER.search(line)
         if match:
