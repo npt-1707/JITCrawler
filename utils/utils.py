@@ -65,9 +65,21 @@ def split_diff_log(file_diff_log):
     return files_log
 
 
+def is_numeric_string(string):
+    # Regular expression pattern to match decimal numbers
+    pattern = r"^[+-]?\d*\.?\d+$"
+
+    # Check if the string matches the pattern
+    return re.match(pattern, string) is not None
+
+
 def process_one_line_blame(log):
     log = log.split()
-    pattern = r'(\w+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)\s+(.*)'
+    while not is_numeric_string(log[1]):
+        log.remove(log[1])
+    log = " ".join(log)
+
+    pattern = r'(\S+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)(.*)'
 
     # Extract the information using the pattern
     match = re.match(pattern, log)
@@ -81,14 +93,14 @@ def process_one_line_blame(log):
         blame_line_b = int(match.group(5))
 
         # Create a dictionary with the extracted information
-        output = {
-            "commit_id": commit_id,
+        return {
+            "blame_id": commit_id,
             "blame_line_a": blame_line_a,
-            "author_name": author_name,
-            "date": date,
+            "blame_author": author_name,
+            "blame_date": date,
             "blame_line_b": blame_line_b,
         }
-    return output
+    return None
 
 
 def get_file_blame(file_blame_log):
@@ -100,7 +112,7 @@ def get_file_blame(file_blame_log):
         if not line_blame["blame_id"] in id2line:
             id2line[line_blame["blame_id"]] = {
                 "id": line_blame["blame_id"],
-                "author": line_blame["blame_autor"],
+                "author": line_blame["blame_author"],
                 "time": line_blame["blame_date"],
                 "ranges": [],
             }
