@@ -27,11 +27,14 @@ def exec_cmd(command):
     # output = pip.buffer.read().decode(encoding="utf8", errors="ignore")
     # output = output.strip("\n").split("\n") if output else []
     # return output
-    result = subprocess.run(command, shell=True,
-                            capture_output=True, text=False)
+    result = subprocess.run(command,
+                            shell=True,
+                            capture_output=True,
+                            text=False)
     output = result.stdout.strip(b"\n").split(b"\n") if result.stdout else []
-    output = [line.decode(encoding="utf8", errors="replace")
-              for line in output]
+    output = [
+        line.decode(encoding="utf8", errors="replace") for line in output
+    ]
     return output
 
 
@@ -62,35 +65,30 @@ def split_diff_log(file_diff_log):
     return files_log
 
 
-def is_numeric_string(string):
-    # Regular expression pattern to match decimal numbers
-    pattern = r"^[+-]?\d*\.?\d+$"
-
-    # Check if the string matches the pattern
-    return re.match(pattern, string) is not None
-
-
 def process_one_line_blame(log):
     log = log.split()
-    blame_id = log[0]
-    while not is_numeric_string(log[1]):
-        log.remove(log[1])
-    blame_line_a = int(log[1])
-    for idx, word in enumerate(log[2:]):
-        if is_numeric_string(word):
-            break
-    idx = idx + 2
-    blame_date = int(log[idx])
-    blame_autor = " ".join(log[2:idx])[1:]
-    blame_line_b = int(log[idx + 2][:-1])
+    pattern = r'(\w+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)\s+(.*)'
 
-    return {
-        "blame_id": blame_id,
-        "blame_line_a": blame_line_a,
-        "blame_autor": blame_autor,
-        "blame_date": blame_date,
-        "blame_line_b": blame_line_b,
-    }
+    # Extract the information using the pattern
+    match = re.match(pattern, log)
+
+    if match:
+        # Extract the matched components
+        commit_id = match.group(1)
+        blame_line_a = int(match.group(2))
+        author_name = match.group(3)
+        date = int(match.group(4))
+        blame_line_b = int(match.group(5))
+
+        # Create a dictionary with the extracted information
+        output = {
+            "commit_id": commit_id,
+            "blame_line_a": blame_line_a,
+            "author_name": author_name,
+            "date": date,
+            "blame_line_b": blame_line_b,
+        }
+    return output
 
 
 def get_file_blame(file_blame_log):
@@ -147,16 +145,12 @@ def get_commit_info(commit_id, languages=[]):
         except:
             continue
         for file_diff in files_diff:
-            file_name_a = (
-                file_diff["from"]["file"]
-                if file_diff["rename"] or file_diff["from"]["mode"] != "0000000"
-                else file_diff["to"]["file"]
-            )
-            file_name_b = (
-                file_diff["to"]["file"]
-                if file_diff["rename"] or file_diff["to"]["mode"] != "0000000"
-                else file_diff["from"]["file"]
-            )
+            file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
+                           or file_diff["from"]["mode"] != "0000000" else
+                           file_diff["to"]["file"])
+            file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
+                           or file_diff["to"]["mode"] != "0000000" else
+                           file_diff["from"]["file"])
             if file_diff["is_binary"] or len(file_diff["content"]) == 0:
                 continue
 
@@ -216,7 +210,6 @@ def find_file_author(blame, file_path):
 #     authors = set(exec_cmd(command.format(commit_id)))
 #     return len(authors)
 
-
 # def get_file_ndev(commit_id, file_path):
 #     """
 #     Count the number of developers in a file given a commit
@@ -227,7 +220,6 @@ def find_file_author(blame, file_path):
 #     command = "git log --format=%an --follow {} -- {} | sort -u"
 #     authors = set(exec_cmd(command.format(commit_id, file_path)))
 #     return authors
-
 
 # def calc_lt(commit_id, file_path):
 #     return int(exec_cmd("git blame {} -- {} | wc -l".format(commit_id, file_path))[0])
