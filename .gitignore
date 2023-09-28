@@ -37,3 +37,10 @@ ehthumbs.db
 Thumbs.db
 
 .vscode
+
+__pycache__
+
+# folders and files #
+save
+design
+test.py

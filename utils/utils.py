@@ -4,6 +4,8 @@ from utils.line_parser import parse_lines
 from utils.aggregator import aggregator
 import subprocess
 import re
+import pickle
+import json
 
 
 def clone_repo(clone_path, name, url):
@@ -211,32 +213,6 @@ def find_file_author(blame, file_path):
     return list(commit), list(author)
 
 
-# def calc_commit_ndev(commit_id, is_first=False):
-#     '''
-#     Count the number of developers in a commit
-#     '''
-#     if is_first:
-#         command = "git log --pretty=format:%an {}"
-#     else:
-#         command = "git log --pretty=format:%an {}^.."
-#     authors = set(exec_cmd(command.format(commit_id)))
-#     return len(authors)
-
-# def get_file_ndev(commit_id, file_path):
-#     """
-#     Count the number of developers in a file given a commit
-#     """
-#     # command = "git blame --show-email {} -- {} | sed 's/[(]//' | cut -d' ' -f2 | sort -u "
-#     # authors = set(exec_cmd(command.format(commit_id, file_path)))
-#     # return len(authors)
-#     command = "git log --format=%an --follow {} -- {} | sort -u"
-#     authors = set(exec_cmd(command.format(commit_id, file_path)))
-#     return authors
-
-# def calc_lt(commit_id, file_path):
-#     return int(exec_cmd("git blame {} -- {} | wc -l".format(commit_id, file_path))[0])
-
-
 def get_subs_dire_name(fileDirs):
     """
     Get the subsystem, directory, and file from a file path
@@ -264,17 +240,6 @@ def calc_entrophy(totalLOCModified, locModifiedPerFile):
             entrophy -= avg * math.log(avg, 2)
 
     return entrophy
-
-
-# def get_file_age(commit_id, file_path):
-#     """
-#     Calculate the age of file in a commit
-#     """
-#     command = "git blame --date=format-local:%s {} -- {} | cut -d' ' -f3 | sort -u"
-#     date = exec_cmd(command)
-#     if not date:
-#         return 0
-#     return max(map(int, date))
 
 
 def check_fix(msg):
@@ -364,3 +329,29 @@ def get_programming_language(file_path):
     }
 
     return language_map.get(extension, None)
+
+
+def load_pkl(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "rb") as f:
+        data = pickle.load(f)
+    return data
+
+
+def load_json(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "rb") as f:
+        data = json.load(f)
+    return data
+
+
+def save_pkl(data, path):
+    with open(path, "wb") as f:
+        pickle.dump(data, f)
+
+
+def save_json(data, path):
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)

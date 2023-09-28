@@ -4,82 +4,259 @@ import pandas as pd
 from github import Github
 from tqdm import tqdm
 from utils.utils import *
-import pickle
+import datetime
+import sys
 
 
 class RepositoryExtractor:
-    def __init__(self, g: Github, owner: str, name: str, path: str, end):
-        self.repo = g.get_repo(f"{owner}/{name}")
-        self.clone_path = os.path.join(path, "repo", owner)
-        self.repo_path = os.path.join(self.clone_path, name)
-        self.save_path = os.path.join(path, "save")
-        self.commits_path = os.path.join(
-            self.save_path, f"commits_{name}_{end}.pkl")
-        # self.features_path = os.path.join(
-        #     self.save_path, f"features_{name}_{end}.pkl")
-        # self.files_path = os.path.join(
-        #     self.save_path, f"files_{name}_{end}.pkl")
-        # self.authors_path = os.path.join(
-        #     self.save_path, f"authors_{name}_{end}.pkl")
-        self.csv_path = os.path.join(self.save_path, f"{owner}_{name}_{end}.csv")
-        if not os.path.exists(self.clone_path):
-            os.makedirs(self.clone_path)
-        if not os.path.exists(self.save_path):
-            os.makedirs(self.save_path)
-        # clone the repository
-        os.chdir(self.clone_path)
-        clone_repo(self.clone_path, self.repo.name, self.repo.clone_url)
 
-        # get the commit hashes from start to end
-        os.chdir(self.repo_path)
-        self.commit_ids = get_commit_hashes(end)[::-1]
-        print(f"Number of commits before {end}: {len(self.commit_ids)}")
-
-        # load the existing commits info, files info, authors info
-        self.commits = {}
-        self.files = {}
-        self.authors = {}
-        self.features = {}
-
-        if os.path.exists(self.commits_path):
-            with open(self.commits_path, "rb") as f:
-                self.commits = pickle.load(f)
-
-        # if os.path.exists(self.files_path):
-        #     with open(self.files_path, "rb") as f:
-        #         self.files = pickle.load(f)
-
-        # if os.path.exists(self.authors_path):
-        #     with open(self.authors_path, "rb") as f:
-        #         self.authors = pickle.load(f)
+    def config_repo(self, config):
+        """
+        Input:
+            config: dict
+                # compulsory parameters
+                |- save_path: the root path of the saved data
+                |- mode: "local" or "online"
                 
-        # if os.path.exists(self.features_path):
-        #     with open(self.features_path, "rb") as f:
-        #         self.features = pickle.load(f)
+                # optional parameters 
+                |- local_repo_path: the path to the local repositoy
+                |- main_language: the main programming language of the repository
+                |- github_token_path: the path to the github token
+                |- github_owner: the owner of the github repository
+                |- github_repo: the name of the github repository
+                |- to_csv: whether to save the features to csv
+                
+        Output:
+            self.cfg: dict
+                |- mode: "local" or "online"
+                |- date: the date of checking the repository
+                |- main_language: the main programming language of the repository
+                |- save_path: the paths saving extractor information
+                |- repo_path: the path of the saved repository
+                
+            self.repo: dict
+                |- ids: the list of commit ids
+                |- commits: the dict of commits information
+                |- features: the dict of commits features
+                |- authors: the dict of authors 
+                |- files: the dict of files 
+        """
+        self.cfg = {
+            "mode": config.mode,
+            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+        }
 
-        # get main language
-        self.language = self.repo.language
+        if config.mode == "local":
+            self.init_local_repo(config)
+        elif config.mode == "online":
+            self.init_online_repo(config)
 
-    def get_repo_commits_info(self, main_language_only=False):
+        save_path = os.path.join(os.path.abspath(config.save_path),
+                                 self.cfg["name"])
+        print(save_path, self.cfg["name"])
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
+        self.cfg["save_path"] = save_path
+
+        self.files = {
+            "ids": os.path.join(save_path, "commit_ids.pkl"),
+            "commits": os.path.join(save_path, "repo_commits.pkl"),
+            "features": os.path.join(save_path, "repo_features.pkl"),
+            "authors": os.path.join(save_path, "repo_authors.pkl"),
+            "files": os.path.join(save_path, "repo_files.pkl"),
+        }
+
+        if os.path.exists(save_path) and "commit_ids.pkl" in os.listdir(
+                save_path):
+            self.load_repo()
+        else:
+            self.repo = {
+                "ids": [],
+                "commits": {},
+                "features": {},
+                "authors": {},
+                "files": {},
+            }
+        self.run()
+
+    def run(self, to_csv=False):
+        """
+        Extract the repository information and check for uncommited files
+        """
+        cur_dir = os.getcwd()
+        os.chdir(self.cfg["repo_path"])
+        self.repo["ids"] = get_commit_hashes(self.cfg["date"])[::-1]
+        self.head = self.repo["ids"][-1]
+
+        if self.head not in self.repo["commits"]:
+            self.extract_repo_commits_info()
+            self.extract_repo_commits_features(to_csv=to_csv)
+
+        if self.cfg["mode"] == "local":
+            self.check_uncommit()
+
+        os.chdir(cur_dir)
+
+        save_pkl(self.repo["ids"], self.files["ids"])
+        save_json(self.cfg, os.path.join(self.cfg["save_path"], "config.json"))
+
+    def load_repo(self):
+        """
+        Load existed files
+        """
+        self.repo = {
+            "commits": load_pkl(self.files["commits"]),
+            "features": load_pkl(self.files["features"]),
+            "authors": load_pkl(self.files["authors"]),
+            "files": load_pkl(self.files["files"]),
+        }
+
+    def init_local_repo(self, config):
+        """
+        Config the local repository path
+        """
+        self.cfg["name"] = os.path.basename(
+            os.path.normpath(os.path.abspath(config.local_repo_path)))
+        self.cfg["main_language"] = config.main_language
+        self.cfg["repo_path"] = os.path.abspath(config.local_repo_path)
+
+    def init_online_repo(self, config):
+        """
+        Config the cloned repository path
+        """
+        with open(config.github_token_path, "r") as f:
+            github_token = f.read().strip()
+        g = Github(github_token)
+        repo = g.get_repo(f"{config.github_owner}/{config.github_repo}")
+        clone_url = repo.clone_url
+        root = sys.path[0]
+        clone_path = os.path.join(root, "repo")
+        if not os.path.exists(clone_path):
+            os.makedirs(clone_path)
+        clone_repo(clone_path, config.github_repo, clone_url)
+        self.cfg["name"] = config.github_repo
+        self.cfg["main_language"] = repo.language
+        self.cfg["repo_path"] = os.path.join(clone_path, config.github_repo)
+
+    def extract_one_commit_info(self, commit_id, languages=[]):
+        """
+        Input:
+            commit_id: the id of the commit
+        Output:
+            commit: dict of commit's information
+                |- commit_id: the id of the commit
+                |- parent_id: the id of the parent commit
+                |- subject: the subject of the commit
+                |- msg: the message of the commit
+                |- author: the author of the commit
+                |- date: the date of the commit
+                |- files: the list of files in the commit
+                |- diff: the dict of files diff in the commit
+                |- blame: the dict of files blame in the commit
+        """
+        command = "git show {} --name-only --pretty=format:'%H%n%P%n%an%n%ct%n%s%n%B%n[ALL CHANGE FILES]'"
+
+        show_msg = exec_cmd(command.format(commit_id))
+        show_msg = [msg.strip() for msg in show_msg]
+        file_index = show_msg.index("[ALL CHANGE FILES]")
+
+        subject = show_msg[4]
+        head = show_msg[:5]
+        commit_msg = show_msg[5:file_index]
+
+        parent_id = head[1]
+        author = head[2]
+        commit_date = head[3]
+        commit_msg = " ".join(commit_msg)
+
+        command = "git show {} --pretty=format: --unified=999999999"
+        diff_log = split_diff_log(exec_cmd(command.format(commit_id)))
+        commit_diff = {}
+        commit_blame = {}
+        files = []
+        for log in diff_log:
+            try:
+                files_diff = aggregator(parse_lines(log))
+            except:
+                continue
+            for file_diff in files_diff:
+                file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
+                               or file_diff["from"]["mode"] != "0000000" else
+                               file_diff["to"]["file"])
+                file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
+                               or file_diff["to"]["mode"] != "0000000" else
+                               file_diff["from"]["file"])
+                if file_diff["is_binary"] or len(file_diff["content"]) == 0:
+                    continue
+
+                if file_diff["from"]["mode"] == "000000000":
+                    continue
+
+                if len(languages) > 0:
+                    file_language = get_programming_language(file_name_b)
+                    if file_language not in languages:
+                        continue
+
+                command = "git blame -t -n -l {} '{}'"
+                file_blame_log = exec_cmd(
+                    command.format(parent_id, file_name_a))
+                if not file_blame_log:
+                    continue
+                file_blame = get_file_blame(file_blame_log)
+
+                commit_blame[file_name_b] = file_blame
+                commit_diff[file_name_b] = file_diff
+                files.append(file_name_b)
+
+        commit = {
+            "commit_id": commit_id,
+            "parent_id": parent_id,
+            "subject": subject,
+            "msg": commit_msg,
+            "author": author,
+            "date": int(commit_date),
+            "files": files,
+            "diff": commit_diff,
+            "blame": commit_blame,
+        }
+        return commit
+
+    def extract_repo_commits_info(self, main_language_only=False):
+        """
+        Input:
+            main_language_only: whether to only extract commits with main language
+        Output:
+            self.repo["commits"]: dict of commits information
+        """
         if main_language_only:
-            languages = [self.language]
+            languages = [self.cfg["main_language"]]
         else:
             languages = []
         print("Collecting commits information ...")
-        for commit_id in tqdm(self.commit_ids):
-            if commit_id not in self.commits:
-                commit = get_commit_info(commit_id, languages)
+        is_updated = False
+        for commit_id in tqdm(self.repo["ids"]):
+            if commit_id not in self.repo["commits"]:
+                commit = self.extract_one_commit_info(commit_id, languages)
                 if not commit["diff"]:
                     continue
-                self.commits[commit_id] = commit
+                self.repo["commits"][commit_id] = commit
+                is_updated = True
 
-        with open(self.commits_path, "wb") as f:
-            pickle.dump(self.commits, f)
+        if self.cfg["mode"] == "local":
+            self.repo["commits"]["uncommit"] = self.check_uncommit()
+            if self.repo["commits"]["uncommit"] is not None:
+                is_updated = True
 
-    def extract_k_features(self, commit_id):
-        commit = self.commits[commit_id]
-        commit_date = commit["commit_date"]
-        commit_message = commit["commit_msg"]
+        if is_updated:
+            save_pkl(self.repo["commits"], self.files["commits"])
+            save_json(self.repo["commits"],
+                      os.path.join(self.cfg["save_path"], "commits.json"))
+
+    def extract_one_commit_features(self, commit_id):
+        commit = self.repo["commits"][commit_id]
+        commit_date = commit["date"]
+        commit_message = commit["msg"]
         commit_author = commit["author"]
         commit_diff = commit["diff"]
         commit_blame = commit["blame"]
@@ -90,7 +267,7 @@ class RepositoryExtractor:
         locModifiedPerFile = []
         authors = []
         ages = []
-        author_exp = self.authors.get(commit_author, {})
+        author_exp = self.repo["authors"].get(commit_author, {})
 
         for file_elem in list(commit_diff.items()):
             file_path = file_elem[0]
@@ -112,7 +289,7 @@ class RepositoryExtractor:
             totalLOCModified += la + ld
             locModifiedPerFile.append(totalLOCModified)
 
-            file = self.files.get(file_path, {"author": [], "nuc": 0})
+            file = self.repo["files"].get(file_path, {"author": [], "nuc": 0})
             file_author = file["author"]
             if commit_author not in file_author:
                 file_author.append(commit_author)
@@ -127,13 +304,13 @@ class RepositoryExtractor:
             nuc += file_nuc
 
             file["nuc"] = file_nuc
-            self.files[file_path] = file
+            self.repo["files"][file_path] = file
 
             if file_path in author_exp:
                 author_exp[file_path].append(commit_date)
             else:
                 author_exp[file_path] = [commit_date]
-            self.authors[commit_author] = author_exp
+            self.repo["authors"][commit_author] = author_exp
 
         feature = {
             "_id": commit_id,
@@ -155,18 +332,32 @@ class RepositoryExtractor:
         }
         return feature
 
-    def extrac_repo_k_features(self):
+    def extract_repo_commits_features(self, to_csv=False):
         print("Extracting features ...")
-        for commit_id in tqdm(self.commits):
-            if commit_id not in self.features:
-                k_features = self.extract_k_features(commit_id)
-                self.features[commit_id] = k_features
+        is_updated = False
+        for commit_id in tqdm(self.repo["commits"]):
+            if commit_id not in self.repo["features"]:
+                k_features = self.extract_one_commit_features(commit_id)
+                self.repo["features"][commit_id] = k_features
+                is_updated = True
 
-        # with open(self.files_path, "wb") as f:
-        #     pickle.dump(self.files, f)
+        if self.cfg["mode"] == "local":
+            if self.repo["commits"]["uncommit"] is not None:
+                self.repo["features"][
+                    "uncommit"] = self.extract_one_commit_features("uncommit")
+                is_update = True
+            else:
+                self.repo["features"]["uncommit"] = None
 
-        # with open(self.authors_path, "wb") as f:
-        #     pickle.dump(self.authors, f)
+        if is_updated:
+            save_pkl(self.repo["files"], self.files["files"])
+            save_pkl(self.repo["authors"], self.files["authors"])
+            save_pkl(self.repo["features"], self.files["features"])
+
+        if to_csv:
+            self.cfg["csv_path"] = os.path.join(self.cfg["save_path"],
+                                                "features.csv")
+            self.to_csv()
 
     def to_csv(self):
         print("Saving features to CSV...", end=" ")
@@ -188,7 +379,7 @@ class RepositoryExtractor:
             rexp,
             sexp,
         ) = ([], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [])
-        for commit_feature in self.features.values():
+        for commit_feature in self.repo["features"].values():
             _id.append(commit_feature["_id"])
             date.append(commit_feature["date"])
             ns.append(commit_feature["ns"])
@@ -223,5 +414,83 @@ class RepositoryExtractor:
             "rexp": rexp,
             "sexp": sexp,
         }
-        pd.DataFrame(data).to_csv(self.csv_path)
+        pd.DataFrame(data).to_csv(self.cfg["csv_path"])
         print("Done")
+
+    def get_commits(self, commit_ids: list):
+        """
+        Input:
+            commit_ids: the list of commit ids
+        Output:
+            commits: the list of commits
+        """
+        infos = []
+        features = []
+        for commit_id in commit_ids:
+            if commit_id not in self.repo["commits"]:
+                raise Exception(
+                    f"Commit id {commit_id} not found in extractor {self.cfg.path['commits']}"
+                )
+            infos.append(self.repo["commits"][commit_id])
+            features.append(self.repo["features"][commit_id])
+
+        return infos, features
+
+    def check_uncommit(self):
+        command = "git config --get user.name"
+        author = exec_cmd(command)[0]
+
+        command = "git diff --pretty=format: --unified=999999999"
+        diff_log = exec_cmd(command)
+        if diff_log == []:
+            return None
+        diff_log = split_diff_log(exec_cmd(command))
+        commit_diff = {}
+        commit_blame = {}
+        files = []
+        languages = [self.cfg["main_language"]]
+        for log in diff_log:
+            try:
+                files_diff = aggregator(parse_lines(log))
+            except:
+                continue
+            for file_diff in files_diff:
+                file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
+                               or file_diff["from"]["mode"] != "0000000" else
+                               file_diff["to"]["file"])
+                file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
+                               or file_diff["to"]["mode"] != "0000000" else
+                               file_diff["from"]["file"])
+                if file_diff["is_binary"] or len(file_diff["content"]) == 0:
+                    continue
+
+                if file_diff["from"]["mode"] == "000000000":
+                    continue
+
+                file_language = get_programming_language(file_name_b)
+                if file_language not in languages:
+                    continue
+
+                command = "git blame -t -n -l {} '{}'"
+                file_blame_log = exec_cmd(
+                    command.format(self.head, file_name_a))
+                if not file_blame_log:
+                    continue
+                file_blame = get_file_blame(file_blame_log)
+
+                commit_blame[file_name_b] = file_blame
+                commit_diff[file_name_b] = file_diff
+                files.append(file_name_b)
+
+        commit = {
+            "commit_id": "Uncommit",
+            "parent_id": self.head,
+            "subject": None,
+            "msg": "",
+            "author": author,
+            "date": int(datetime.datetime.now().timestamp()),
+            "files": files,
+            "diff": commit_diff,
+            "blame": commit_blame,
+        }
+        return commit
