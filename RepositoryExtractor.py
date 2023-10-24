@@ -3,9 +3,10 @@ import numpy as np
 import pandas as pd
 from github import Github
 from tqdm import tqdm
-from utils.utils import *
+from utils import *
 import datetime
 import sys
+import random
 
 
 class RepositoryExtractor:
@@ -17,13 +18,23 @@ class RepositoryExtractor:
                 # compulsory parameters
                 |- save_path: the root path of the saved data
                 |- mode: "local" or "online"
+                |- start: start date to extract
+                |- end: end date to extract
                 
-                # optional parameters 
+                # optional parameters
+                ## for local repo
                 |- local_repo_path: the path to the local repositoy
                 |- main_language: the main programming language of the repository
+                
+                ## for online repo
                 |- github_token_path: the path to the github token
                 |- github_owner: the owner of the github repository
                 |- github_repo: the name of the github repository
+                
+                ## other parameters
+                |- excepted_ids_path: the path to the pickle file of the excepted commit ids
+                |- extract_features: whether to extract features
+                |- rand_num: the number of random commits to extract
                 |- to_csv: whether to save the features to csv
                 
         Output:
@@ -44,6 +55,11 @@ class RepositoryExtractor:
         self.cfg = {
             "mode": config.mode,
             "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "start": config.start,
+            "end": config.end,
+            "rand_num": config.rand_num,
+            "extract_features": config.extract_features,
+            "excepted_ids_path": config.excepted_ids_path
         }
 
         if config.mode == "local":
@@ -87,10 +103,14 @@ class RepositoryExtractor:
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
         self.repo["ids"] = get_commit_hashes(self.cfg["date"])[::-1]
-        self.head = self.repo["ids"][-1]
-
-        if self.head not in self.repo["commits"]:
-            self.extract_repo_commits_info()
+        if self.cfg["excepted_ids_path"] is not None:
+            excepted_ids = load_pkl(self.cfg["excepted_ids_path"])
+            self.repo["ids"] = list(set(self.repo["ids"]).difference(excepted_ids))
+        if self.cfg["rand_num"] is not None:
+            self.repo["ids"] = random.sample(self.repo["ids"], self.cfg["rand_num"])
+        
+        self.extract_repo_commits_info()
+        if self.cfg["extract_features"]:
             self.extract_repo_commits_features(to_csv=to_csv)
 
         if self.cfg["mode"] == "local":
@@ -190,7 +210,7 @@ class RepositoryExtractor:
                 if file_diff["is_binary"] or len(file_diff["content"]) == 0:
                     continue
 
-                if file_diff["from"]["mode"] == "000000000":
+                if file_diff["from"]["mode"] == "0000000":
                     continue
 
                 if len(languages) > 0:
@@ -250,9 +270,7 @@ class RepositoryExtractor:
 
         if is_updated:
             save_pkl(self.repo["commits"], self.files["commits"])
-            save_json(self.repo["commits"],
-                      os.path.join(self.cfg["save_path"], "commits.json"))
-
+            
     def extract_one_commit_features(self, commit_id):
         commit = self.repo["commits"][commit_id]
         commit_date = commit["date"]
