@@ -10,6 +10,8 @@ def clone_repo(clone_path, name, url):
     """
     Clones a repository to the current directory
     """
+    cur_dir = os.getcwd()
+    os.chdir(clone_path)
     if name not in os.listdir(clone_path):
         command = "git clone {}"
         os.system(command.format(url))
@@ -17,6 +19,7 @@ def clone_repo(clone_path, name, url):
         print(f"Existed '{name}' repository")
         command = "git pull"
         os.system(command)
+    os.chdir(cur_dir)
 
 
 def exec_cmd(command):
