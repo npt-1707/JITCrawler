@@ -4,7 +4,7 @@ python3 main.py \
     --start "2013-10-24"\
     --end "2022-11-20"\
     --github_token_path $2\
-    --github_owner \
+    --github_owner torvalds\
     --github_repo linux\
     --excepted_ids_path $3\
     --rand_num 50000
