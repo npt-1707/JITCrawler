@@ -102,13 +102,16 @@ class RepositoryExtractor:
         """
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
-        self.repo["ids"] = get_commit_hashes(self.cfg["date"])[::-1]
+        self.repo["ids"] = get_commit_hashes(start=self.cfg["start"],
+                                             end=self.cfg["end"])[::-1]
         if self.cfg["excepted_ids_path"] is not None:
             excepted_ids = load_pkl(self.cfg["excepted_ids_path"])
-            self.repo["ids"] = list(set(self.repo["ids"]).difference(excepted_ids))
+            self.repo["ids"] = list(
+                set(self.repo["ids"]).difference(excepted_ids))
         if self.cfg["rand_num"] is not None:
-            self.repo["ids"] = random.sample(self.repo["ids"], self.cfg["rand_num"])
-        
+            self.repo["ids"] = random.sample(self.repo["ids"],
+                                             self.cfg["rand_num"])
+
         self.extract_repo_commits_info()
         if self.cfg["extract_features"]:
             self.extract_repo_commits_features(to_csv=to_csv)
@@ -270,7 +273,7 @@ class RepositoryExtractor:
 
         if is_updated:
             save_pkl(self.repo["commits"], self.files["commits"])
-            
+
     def extract_one_commit_features(self, commit_id):
         commit = self.repo["commits"][commit_id]
         commit_date = commit["date"]

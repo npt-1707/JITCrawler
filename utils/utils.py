@@ -49,8 +49,10 @@ def get_commit_hashes(start=None, end=None):
         command = 'git log --all --no-decorate --no-merges --pretty=format:"%H"'
     elif start is None:
         command = f'git log --all --before={end} --no-decorate --no-merges --pretty=format:"%H"'
-    else:
+    elif end is None:
         command = f'git log --all --after={start} --no-decorate --no-merges --pretty=format:"%H"'
+    else:
+        command = f'git log --all --after={start} --before={end} --no-decorate --no-merges --pretty=format:"%H"'
     return exec_cmd(command)
 
 
