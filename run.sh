@@ -7,4 +7,5 @@ python3 main.py \
     --github_owner torvalds\
     --github_repo linux\
     --excepted_ids_path $3\
-    --rand_num 50000
+    --rand_num 50000\
+    --num_commits_per_file 5000\

@@ -110,7 +110,7 @@ class RepositoryExtractor:
         """
         Extract the repository information and check for uncommited files
         """
-        print("Run")
+        print(f"Running repo {self.cfg['name']} ...")
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
         ids = get_commit_hashes(start=self.cfg["start"],
@@ -128,9 +128,6 @@ class RepositoryExtractor:
                 self.repo["ids"][id] = -1
         if not self.cfg["num_commits_per_file"]:
             self.cfg["num_commits_per_file"] = len(self.repo["ids"])
-
-        import json
-        print(json.dumps(self.repo["ids"], indent=4))
         del ids
 
         self.extract_repo_commits_info()
