@@ -64,6 +64,7 @@ class RepositoryExtractor:
             "num_commits_per_file": config.num_commits_per_file,
             "num_files": 0,
             "last_file_num_commits": 0,
+            "to_csv": config.to_csv,
         }
 
         if config.mode == "local":
@@ -101,27 +102,27 @@ class RepositoryExtractor:
             "authors": {},
             "files": {},
         }
-        if os.path.exists(self.files["ids"]):
-            self.repo["ids"] = load_pkl(self.files["ids"])
+        self.repo["ids"] = load_pkl(self.files["ids"])
         self.run()
         save_json(self.cfg, self.files["config"])
 
-    def run(self, to_csv=False):
+    def run(self):
         """
         Extract the repository information and check for uncommited files
         """
         print(f"Running repo {self.cfg['name']} ...")
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
-        ids = get_commit_hashes(start=self.cfg["start"],
-                                end=self.cfg["end"])[::-1]
-        if self.cfg["excepted_ids_path"]:
-            excepted_ids = load_pkl(self.cfg["excepted_ids_path"])
-            ids = list(set(ids).difference(excepted_ids))
-        if self.cfg["rand_num"]:
-            ids = random.sample(ids, self.cfg["rand_num"])
         if self.cfg["ids_path"]:
             ids = load_pkl(self.cfg["ids_path"])
+        else:
+            ids = get_commit_hashes(start=self.cfg["start"],
+                                    end=self.cfg["end"])[::-1]
+            if self.cfg["excepted_ids_path"]:
+                excepted_ids = load_pkl(self.cfg["excepted_ids_path"])
+                ids = list(set(ids).difference(excepted_ids))
+            if self.cfg["rand_num"]:
+                ids = random.sample(ids, self.cfg["rand_num"])
 
         for id in ids:
             if id not in self.repo["ids"]:
@@ -132,24 +133,12 @@ class RepositoryExtractor:
 
         self.extract_repo_commits_info()
         if self.cfg["extract_features"]:
-            self.extract_repo_commits_features(to_csv=to_csv)
+            self.extract_repo_commits_features(to_csv=self.cfg["to_csv"])
 
         # if self.cfg["mode"] == "local":
         #     self.check_uncommit()
         os.chdir(cur_dir)
         save_pkl(self.repo["ids"], self.files["ids"])
-
-    # def load_repo(self):
-    #     """
-    #     Load existed files
-    #     """
-    #     self.repo = {
-    #         "ids": load_pkl(self.files["ids"]),
-    #         "commits": load_pkl(self.files["commits"]),
-    #         "features": load_pkl(self.files["features"]),
-    #         "authors": load_pkl(self.files["authors"]),
-    #         "files": load_pkl(self.files["files"]),
-    #     }
 
     def init_local_repo(self, config):
         """
@@ -303,10 +292,11 @@ class RepositoryExtractor:
         if self.repo["commits"]:
             save_pkl(self.repo["commits"],
                      self.files["commits"].format(self.cfg["num_files"]))
+            self.repo["commits"] = {}
         # print(json.dumps(self.repo["ids"], indent=4))
 
-    def extract_one_commit_features(self, commit_id):
-        commit = self.repo["commits"][commit_id]
+    def extract_one_commit_features(self, commit):
+        commit_id = commit["_id"]
         commit_date = commit["date"]
         commit_message = commit["msg"]
         commit_author = commit["author"]
@@ -386,25 +376,32 @@ class RepositoryExtractor:
 
     def extract_repo_commits_features(self, to_csv=False):
         print("Extracting features ...")
+        self.repo["files"] = load_pkl(self.files["files"])
+        self.repo["authors"] = load_pkl(self.files["authors"])
+        
         is_updated = False
-        for commit_id in tqdm(self.repo["commits"]):
-            if commit_id not in self.repo["features"]:
-                k_features = self.extract_one_commit_features(commit_id)
-                self.repo["features"][commit_id] = k_features
-                is_updated = True
+        for num_file in range(self.cfg["num_files"]+1):
+            commits = load_pkl(self.files["commits"].format(num_file))
+            for commit_id in tqdm(self.repo["commits"]):
+                if commit_id not in self.repo["features"]:
+                    k_features = self.extract_one_commit_features(commit_id)
+                    self.repo["features"][commit_id] = k_features
+                    is_updated = True
 
-        if self.cfg["mode"] == "local":
-            if self.repo["commits"]["uncommit"] is not None:
-                self.repo["features"][
-                    "uncommit"] = self.extract_one_commit_features("uncommit")
-                is_update = True
-            else:
-                self.repo["features"]["uncommit"] = None
+        # if self.cfg["mode"] == "local":
+        #     if self.repo["commits"]["uncommit"] is not None:
+        #         self.repo["features"][
+        #             "uncommit"] = self.extract_one_commit_features("uncommit")
+        #         is_update = True
+        #     else:
+        #         self.repo["features"]["uncommit"] = None
 
         if is_updated:
             save_pkl(self.repo["files"], self.files["files"])
             save_pkl(self.repo["authors"], self.files["authors"])
             save_pkl(self.repo["features"], self.files["features"])
+        self.repo["files"] = {}
+        self.repo["authors"] = {}
 
         if to_csv:
             self.cfg["csv_path"] = os.path.join(self.cfg["save_path"],
@@ -469,80 +466,80 @@ class RepositoryExtractor:
         pd.DataFrame(data).to_csv(self.cfg["csv_path"])
         print("Done")
 
-    def get_commits(self, commit_ids: list):
-        """
-        Input:
-            commit_ids: the list of commit ids
-        Output:
-            commits: the list of commits
-        """
-        infos = []
-        features = []
-        for commit_id in commit_ids:
-            if commit_id not in self.repo["commits"]:
-                raise Exception(
-                    f"Commit id {commit_id} not found in extractor {self.cfg.path['commits']}"
-                )
-            infos.append(self.repo["commits"][commit_id])
-            features.append(self.repo["features"][commit_id])
+    # def get_commits(self, commit_ids: list):
+    #     """
+    #     Input:
+    #         commit_ids: the list of commit ids
+    #     Output:
+    #         commits: the list of commits
+    #     """
+    #     infos = []
+    #     features = []
+    #     for commit_id in commit_ids:
+    #         if commit_id not in self.repo["commits"]:
+    #             raise Exception(
+    #                 f"Commit id {commit_id} not found in extractor {self.cfg.path['commits']}"
+    #             )
+    #         infos.append(self.repo["commits"][commit_id])
+    #         features.append(self.repo["features"][commit_id])
 
-        return infos, features
+    #     return infos, features
 
-    def check_uncommit(self):
-        command = "git config --get user.name"
-        author = exec_cmd(command)[0]
+    # def check_uncommit(self):
+    #     command = "git config --get user.name"
+    #     author = exec_cmd(command)[0]
 
-        command = "git diff --pretty=format: --unified=999999999"
-        diff_log = exec_cmd(command)
-        if diff_log == []:
-            return None
-        diff_log = split_diff_log(exec_cmd(command))
-        commit_diff = {}
-        commit_blame = {}
-        files = []
-        languages = [self.cfg["main_language"]]
-        for log in diff_log:
-            try:
-                files_diff = aggregator(parse_lines(log))
-            except:
-                continue
-            for file_diff in files_diff:
-                file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
-                               or file_diff["from"]["mode"] != "0000000" else
-                               file_diff["to"]["file"])
-                file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
-                               or file_diff["to"]["mode"] != "0000000" else
-                               file_diff["from"]["file"])
-                if file_diff["is_binary"] or len(file_diff["content"]) == 0:
-                    continue
+    #     command = "git diff --pretty=format: --unified=999999999"
+    #     diff_log = exec_cmd(command)
+    #     if diff_log == []:
+    #         return None
+    #     diff_log = split_diff_log(exec_cmd(command))
+    #     commit_diff = {}
+    #     commit_blame = {}
+    #     files = []
+    #     languages = [self.cfg["main_language"]]
+    #     for log in diff_log:
+    #         try:
+    #             files_diff = aggregator(parse_lines(log))
+    #         except:
+    #             continue
+    #         for file_diff in files_diff:
+    #             file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
+    #                            or file_diff["from"]["mode"] != "0000000" else
+    #                            file_diff["to"]["file"])
+    #             file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
+    #                            or file_diff["to"]["mode"] != "0000000" else
+    #                            file_diff["from"]["file"])
+    #             if file_diff["is_binary"] or len(file_diff["content"]) == 0:
+    #                 continue
 
-                if file_diff["from"]["mode"] == "000000000":
-                    continue
+    #             if file_diff["from"]["mode"] == "000000000":
+    #                 continue
 
-                file_language = get_programming_language(file_name_b)
-                if file_language not in languages:
-                    continue
+    #             file_language = get_programming_language(file_name_b)
+    #             if file_language not in languages:
+    #                 continue
 
-                command = "git blame -t -n -l {} '{}'"
-                file_blame_log = exec_cmd(
-                    command.format(self.head, file_name_a))
-                if not file_blame_log:
-                    continue
-                file_blame = get_file_blame(file_blame_log)
+    #             command = "git blame -t -n -l {} '{}'"
+    #             file_blame_log = exec_cmd(
+    #                 command.format(self.head, file_name_a))
+    #             if not file_blame_log:
+    #                 continue
+    #             file_blame = get_file_blame(file_blame_log)
 
-                commit_blame[file_name_b] = file_blame
-                commit_diff[file_name_b] = file_diff
-                files.append(file_name_b)
+    #             commit_blame[file_name_b] = file_blame
+    #             commit_diff[file_name_b] = file_diff
+    #             files.append(file_name_b)
 
-        commit = {
-            "commit_id": "Uncommit",
-            "parent_id": self.head,
-            "subject": None,
-            "msg": "",
-            "author": author,
-            "date": int(datetime.datetime.now().timestamp()),
-            "files": files,
-            "diff": commit_diff,
-            "blame": commit_blame,
-        }
-        return commit
+    #     commit = {
+    #         "commit_id": "Uncommit",
+    #         "parent_id": self.head,
+    #         "subject": None,
+    #         "msg": "",
+    #         "author": author,
+    #         "date": int(datetime.datetime.now().timestamp()),
+    #         "files": files,
+    #         "diff": commit_diff,
+    #         "blame": commit_blame,
+    #     }
+    #     return commit
