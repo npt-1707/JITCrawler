@@ -269,13 +269,17 @@ class RepositoryExtractor:
 
         for commit_id in tqdm(self.repo["ids"].keys()):
             if self.repo["ids"][commit_id] == -1:
-                commit = self.extract_one_commit_info(commit_id, languages)
-                if not commit["diff"]:
-                    self.repo["ids"][commit_id] = -2
-                    continue
-                self.repo["commits"][commit_id] = commit
-                self.repo["ids"][commit_id] = self.cfg["num_files"]
-                self.cfg["last_file_num_commits"] += 1
+                try:
+                    commit = self.extract_one_commit_info(commit_id, languages)
+                    if not commit["diff"]:
+                        self.repo["ids"][commit_id] = -2
+                        continue
+                    self.repo["commits"][commit_id] = commit
+                    self.repo["ids"][commit_id] = self.cfg["num_files"]
+                    self.cfg["last_file_num_commits"] += 1
+                except Exception:
+                    self.repo["ids"][commit_id] = -3
+
                 # if self.cfg["mode"] == "local":
                 #     self.repo["commits"]["uncommit"] = self.check_uncommit()
                 #     if self.repo["commits"]["uncommit"] is not None:
@@ -378,13 +382,14 @@ class RepositoryExtractor:
         print("Extracting features ...")
         self.repo["files"] = load_pkl(self.files["files"])
         self.repo["authors"] = load_pkl(self.files["authors"])
-        
+
         is_updated = False
-        for num_file in range(self.cfg["num_files"]+1):
+        for num_file in range(self.cfg["num_files"] + 1):
             commits = load_pkl(self.files["commits"].format(num_file))
-            for commit_id in tqdm(self.repo["commits"]):
+            for commit_id in tqdm(commits):
                 if commit_id not in self.repo["features"]:
-                    k_features = self.extract_one_commit_features(commit_id)
+                    k_features = self.extract_one_commit_features(
+                        commits[commit_id])
                     self.repo["features"][commit_id] = k_features
                     is_updated = True
 
