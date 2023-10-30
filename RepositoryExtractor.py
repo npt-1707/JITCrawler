@@ -300,7 +300,7 @@ class RepositoryExtractor:
         # print(json.dumps(self.repo["ids"], indent=4))
 
     def extract_one_commit_features(self, commit):
-        commit_id = commit["_id"]
+        commit_id = commit["commit_id"]
         commit_date = commit["date"]
         commit_message = commit["msg"]
         commit_author = commit["author"]
