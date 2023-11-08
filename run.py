@@ -13,7 +13,7 @@ def get_params():
 
 params = get_params()
 
-os.chdir(f"git_datasets/{params.prj}")
+os.chdir(f"git_datasets/{params.project}")
 with open(f"git_datasets/{params.project}/{params.project}.txt", "r") as f:
     clone_cmds = [cmd.strip("\n") for cmd in f.readlines()]
 for cmd in clone_cmds:
