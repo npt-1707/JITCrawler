@@ -21,10 +21,10 @@ for cmd in clone_cmds:
         os.system(cmd)
     except:
         IOError(f'Git Clone Error {cmd}')
-repos = [r for r in os.listdir(f"git_datasets/{params.prj}") if os.path.isdir(r)]
-assert len(repos) > 0, "No repos found"
 os.chdir("../../")
 
+repos = [r for r in os.listdir(f"git_datasets/{params.project}") if os.path.isdir(r)]
+assert len(repos) > 0, "No repos found"
 extractor = RepositoryExtractor()
 
 for repo in repos:
