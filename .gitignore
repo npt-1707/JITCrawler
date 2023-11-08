@@ -43,5 +43,6 @@ __pycache__
 # folders and files #
 save
 design
-test.*
+test*
 repo
+commit_ids

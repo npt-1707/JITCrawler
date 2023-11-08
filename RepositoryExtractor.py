@@ -72,6 +72,7 @@ class RepositoryExtractor:
         elif config.mode == "online":
             self.init_online_repo(config)
 
+        self.cfg["ids_path"] = os.path.abspath(self.cfg["ids_path"])
         save_path = os.path.join(os.path.abspath(config.save_path),
                                  self.cfg["name"])
         if not os.path.exists(save_path):
@@ -102,19 +103,20 @@ class RepositoryExtractor:
             "authors": {},
             "files": {},
         }
-        self.repo["ids"] = load_pkl(self.files["ids"])
         self.run()
-        save_json(self.cfg, self.files["config"])
 
     def run(self):
         """
         Extract the repository information and check for uncommited files
         """
-        print(f"Running repo {self.cfg['name']} ...")
+        print(f"Running repo <{self.cfg['name']}> ...")
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
         if self.cfg["ids_path"]:
+            all_ids = get_commit_hashes()
             ids = load_pkl(self.cfg["ids_path"])
+            ids = [id for id in ids if id in all_ids]
+            print("Extracting commits: {}/{}".format(len(ids), len(all_ids)))
         else:
             ids = get_commit_hashes(start=self.cfg["start"],
                                     end=self.cfg["end"])[::-1]
@@ -124,6 +126,7 @@ class RepositoryExtractor:
             if self.cfg["rand_num"]:
                 ids = random.sample(ids, self.cfg["rand_num"])
 
+        self.repo["ids"] = load_pkl(self.files["ids"])
         for id in ids:
             if id not in self.repo["ids"]:
                 self.repo["ids"][id] = -1
@@ -138,8 +141,7 @@ class RepositoryExtractor:
         # if self.cfg["mode"] == "local":
         #     self.check_uncommit()
         os.chdir(cur_dir)
-        save_pkl(self.repo["ids"], self.files["ids"])
-
+        print("Done")
     def init_local_repo(self, config):
         """
         Config the local repository path
@@ -250,13 +252,22 @@ class RepositoryExtractor:
         }
         return commit
 
-    def extract_repo_commits_info(self, main_language_only=True):
+    def extract_repo_commits_info(self, main_language_only=False):
         """
         Input:
             main_language_only: whether to only extract commits with main language
         Output:
             self.repo["commits"]: dict of commits information
         """
+        def save_config():
+            save_pkl(self.repo["ids"], self.files["ids"])
+            save_json(self.cfg, self.files["config"])
+        def save_commit():
+            save_pkl(self.repo["commits"],
+                        self.files["commits"].format(self.cfg["num_files"]))
+            self.repo["commits"] = {}
+            
+            
         if main_language_only:
             languages = [self.cfg["main_language"]]
         else:
@@ -287,17 +298,14 @@ class RepositoryExtractor:
 
                 if self.cfg["last_file_num_commits"] == self.cfg[
                         "num_commits_per_file"]:
-                    save_pkl(
-                        self.repo["commits"],
-                        self.files["commits"].format(self.cfg["num_files"]))
+                    save_commit()
                     self.cfg["last_file_num_commits"] = 0
                     self.cfg["num_files"] += 1
-                    self.repo["commits"] = {}
+                    save_config()
         if self.repo["commits"]:
-            save_pkl(self.repo["commits"],
-                     self.files["commits"].format(self.cfg["num_files"]))
-            self.repo["commits"] = {}
-        # print(json.dumps(self.repo["ids"], indent=4))
+            save_commit()
+            save_config()
+            
 
     def extract_one_commit_features(self, commit):
         commit_id = commit["commit_id"]
@@ -384,7 +392,8 @@ class RepositoryExtractor:
         self.repo["authors"] = load_pkl(self.files["authors"])
 
         is_updated = False
-        for num_file in range(self.cfg["num_files"] + 1):
+        max = self.cfg["num_files"] if self.cfg["last_file_num_commits"] == 0 else self.cfg["num_files"] + 1
+        for num_file in range(max):
             commits = load_pkl(self.files["commits"].format(num_file))
             for commit_id in tqdm(commits):
                 if commit_id not in self.repo["features"]:
