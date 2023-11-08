@@ -38,6 +38,6 @@ extractor = RepositoryExtractor()
 for repo in repos:
     params.prj = repo
     params.local_repo_path = f"git_datasets/{params.project}/{params.prj}"
-    params.ids_path = f"git_datasets/{params.project}/{params.prj}.pkl"
+    params.ids_path = f"git_datasets/{params.project}/{params.project}.pkl"
     params.save_path = f"save/{params.project}"
     extractor.config_repo(params)
