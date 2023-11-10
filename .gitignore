@@ -47,3 +47,4 @@ test*
 repo
 commit_ids
 git_datasets
+*.txt

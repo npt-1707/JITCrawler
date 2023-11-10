@@ -115,7 +115,7 @@ class RepositoryExtractor:
         if self.cfg["ids_path"]:
             all_ids = get_commit_hashes()
             ids = load_pkl(self.cfg["ids_path"])
-            ids = [id for id in ids if id in all_ids]
+            ids = [id for id in set(ids) if id in all_ids] 
             print("Extracting commits: {}/{}".format(len(ids), len(all_ids)))
         else:
             ids = get_commit_hashes(start=self.cfg["start"],
