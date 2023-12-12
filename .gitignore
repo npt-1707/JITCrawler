@@ -42,5 +42,6 @@ __pycache__
 
 # folders and files #
 save
+repo
 design
-test.py
+test*
