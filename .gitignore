@@ -41,7 +41,9 @@ Thumbs.db
 __pycache__
 
 # folders and files #
-save
-repo
+# save
+# repo
 design
 test*
+# data
+model
