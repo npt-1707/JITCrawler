@@ -113,9 +113,10 @@ class RepositoryExtractor:
         cur_dir = os.getcwd()
         os.chdir(self.cfg["repo_path"])
         if self.cfg["ids_path"]:
-            all_ids = get_commit_hashes()
+            all_ids = get_commit_hashes(start=self.cfg["start"],
+                                    end=self.cfg["end"])[::-1]
             ids = load_pkl(self.cfg["ids_path"])
-            ids = [id for id in set(ids) if id in all_ids] 
+            ids = [id for id in all_ids if id in ids] 
             print("Extracting commits: {}/{}".format(len(ids), len(all_ids)))
         else:
             ids = get_commit_hashes(start=self.cfg["start"],
