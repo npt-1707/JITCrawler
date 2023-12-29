@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from github import Github
 from tqdm import tqdm
-from utils.utils import *
+from utils import *
 import datetime
 import sys
 
@@ -190,7 +190,7 @@ class RepositoryExtractor:
                 if file_diff["is_binary"] or len(file_diff["content"]) == 0:
                     continue
 
-                if file_diff["from"]["mode"] == "000000000":
+                if file_diff["from"]["mode"] == "0000000":
                     continue
 
                 if len(languages) > 0:

@@ -132,72 +132,72 @@ def get_file_blame(file_blame_log):
     return id2line
 
 
-def get_commit_info(commit_id, languages=[]):
-    command = "git show {} --name-only --pretty=format:'%H%n%P%n%an%n%ct%n%s%n%B%n[ALL CHANGE FILES]'"
-    show_msg = exec_cmd(command.format(commit_id))
-    show_msg = [msg.strip() for msg in show_msg]
-    file_index = show_msg.index("[ALL CHANGE FILES]")
+# def get_commit_info(commit_id, languages=[]):
+#     command = "git show {} --name-only --pretty=format:'%H%n%P%n%an%n%ct%n%s%n%B%n[ALL CHANGE FILES]'"
+#     show_msg = exec_cmd(command.format(commit_id))
+#     show_msg = [msg.strip() for msg in show_msg]
+#     file_index = show_msg.index("[ALL CHANGE FILES]")
 
-    subject = show_msg[4]
-    head = show_msg[:5]
-    commit_msg = show_msg[5:file_index]
-    # commit_files = show_msg[file_index + 1 :]
+#     subject = show_msg[4]
+#     head = show_msg[:5]
+#     commit_msg = show_msg[5:file_index]
+#     # commit_files = show_msg[file_index + 1 :]
 
-    parent_id = head[1]
-    author = head[2]
-    commit_date = head[3]
-    commit_msg = " ".join(commit_msg)
+#     parent_id = head[1]
+#     author = head[2]
+#     commit_date = head[3]
+#     commit_msg = " ".join(commit_msg)
 
-    command = "git show {} --pretty=format: --unified=999999999"
-    diff_log = split_diff_log(exec_cmd(command.format(commit_id)))
-    commit_diff = {}
-    commit_blame = {}
-    files = []
-    for log in diff_log:
-        try:
-            files_diff = aggregator(parse_lines(log))
-        except:
-            continue
-        for file_diff in files_diff:
-            file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
-                           or file_diff["from"]["mode"] != "0000000" else
-                           file_diff["to"]["file"])
-            file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
-                           or file_diff["to"]["mode"] != "0000000" else
-                           file_diff["from"]["file"])
-            if file_diff["is_binary"] or len(file_diff["content"]) == 0:
-                continue
+#     command = "git show {} --pretty=format: --unified=999999999"
+#     diff_log = split_diff_log(exec_cmd(command.format(commit_id)))
+#     commit_diff = {}
+#     commit_blame = {}
+#     files = []
+#     for log in diff_log:
+#         try:
+#             files_diff = aggregator(parse_lines(log))
+#         except:
+#             continue
+#         for file_diff in files_diff:
+#             file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
+#                            or file_diff["from"]["mode"] != "0000000" else
+#                            file_diff["to"]["file"])
+#             file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
+#                            or file_diff["to"]["mode"] != "0000000" else
+#                            file_diff["from"]["file"])
+#             if file_diff["is_binary"] or len(file_diff["content"]) == 0:
+#                 continue
 
-            if file_diff["from"]["mode"] == "000000000":
-                continue
+#             if file_diff["from"]["mode"] == "000000000":
+#                 continue
 
-            if len(languages) > 0:
-                file_language = get_programming_language(file_name_b)
-                if file_language not in languages:
-                    continue
+#             if len(languages) > 0:
+#                 file_language = get_programming_language(file_name_b)
+#                 if file_language not in languages:
+#                     continue
 
-            command = "git blame -t -n -l {} '{}'"
-            file_blame_log = exec_cmd(command.format(parent_id, file_name_a))
-            if not file_blame_log:
-                continue
-            file_blame = get_file_blame(file_blame_log)
+#             command = "git blame -t -n -l {} '{}'"
+#             file_blame_log = exec_cmd(command.format(parent_id, file_name_a))
+#             if not file_blame_log:
+#                 continue
+#             file_blame = get_file_blame(file_blame_log)
 
-            commit_blame[file_name_b] = file_blame
-            commit_diff[file_name_b] = file_diff
-            files.append(file_name_b)
+#             commit_blame[file_name_b] = file_blame
+#             commit_diff[file_name_b] = file_diff
+#             files.append(file_name_b)
 
-    commit = {
-        "commit_id": commit_id,
-        "parent_id": parent_id,
-        "subject": subject,
-        "commit_msg": commit_msg,
-        "author": author,
-        "commit_date": int(commit_date),
-        "files": files,
-        "diff": commit_diff,
-        "blame": commit_blame,
-    }
-    return commit
+#     commit = {
+#         "commit_id": commit_id,
+#         "parent_id": parent_id,
+#         "subject": subject,
+#         "commit_msg": commit_msg,
+#         "author": author,
+#         "commit_date": int(commit_date),
+#         "files": files,
+#         "diff": commit_diff,
+#         "blame": commit_blame,
+#     }
+#     return commit
 
 
 def find_file_author(blame, file_path):
