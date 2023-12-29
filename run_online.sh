@@ -1,10 +1,1 @@
-python3 main.py \
---save_path $1\
---mode online\
---ids_path $2\
---num_commits_per_file 5000\
---github_token_path $3\
---github_owner $4\
---github_repo $5\
---to_csv True\
---extract_features True\
+python3 main.py  --mode online   --github_token_path $1   --github_owner $2  --github_repo $3  --to_csv True --extract_features True

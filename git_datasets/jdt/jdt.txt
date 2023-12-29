@@ -1,3 +1,0 @@
-git clone https://git.eclipse.org/r/jdt/eclipse.jdt.core
-git clone https://git.eclipse.org/r/jdt/eclipse.jdt.debug
-git clone https://git.eclipse.org/r/jdt/eclipse.jdt.ui

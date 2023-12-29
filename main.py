@@ -17,7 +17,7 @@ def get_params():
     parser.add_argument("--rand_num", type=int, default=0)
     parser.add_argument("--excepted_ids_path", type=str, default="")
     parser.add_argument("--ids_path", type=str, default="")
-    parser.add_argument("--num_commits_per_file", type=int, default=None)
+    parser.add_argument("--num_commits_per_file", type=int, default=5000)
 
     return parser.parse_args()
 
