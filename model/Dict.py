@@ -1,6 +1,5 @@
 import pickle
 
-
 class Dict(object):
     def __init__(self, lower=False):
         self.labelToIdx = {

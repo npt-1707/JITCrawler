@@ -4,15 +4,17 @@ import subprocess
 import re
 import pickle
 import json
+from model.Dict import Dict
 
-
-def clone_repo(clone_path, name, url):
+def clone_repo(clone_path, owner, name, url):
     """
     Clones a repository to the current directory
     """
     cur_dir = os.getcwd()
-    os.chdir(clone_path)
-    if name not in os.listdir(clone_path):
+    if owner not in os.listdir(clone_path):
+        os.mkdir(os.path.join(clone_path, owner))
+    os.chdir(os.path.join(clone_path, owner))
+    if name not in os.listdir(os.path.join(clone_path, owner)):
         command = "git clone {}"
         exec_cmd(command.format(url))
     else:
@@ -26,14 +28,9 @@ def exec_cmd(command):
     """
     Get ouput of executing a command
     """
-    result = subprocess.run(command,
-                            shell=True,
-                            capture_output=True,
-                            text=False)
+    result = subprocess.run(command, shell=True, capture_output=True, text=False)
     output = result.stdout.strip(b"\n").split(b"\n") if result.stdout else []
-    output = [
-        line.decode(encoding="utf8", errors="replace") for line in output
-    ]
+    output = [line.decode(encoding="utf8", errors="replace") for line in output]
     return output
 
 
@@ -85,7 +82,7 @@ def process_one_line_blame(log):
         log.remove(log[1])
     log = " ".join(log)
 
-    pattern = r'(\S+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)(.*)'
+    pattern = r"(\S+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)(.*)"
 
     # Extract the information using the pattern
     match = re.match(pattern, log)
@@ -165,17 +162,17 @@ def get_subs_dire_name(fileDirs):
     return subsystem, directory, file_name
 
 
-def calc_entrophy(totalLOCModified, locModifiedPerFile):
+def calc_entropy(totalLOCModified, locModifiedPerFile):
     """
-    Calculate the entrophy
+    Calculate the entropy
     """
-    entrophy = 0
+    entropy = 0
     for fileLocMod in locModifiedPerFile:
         if fileLocMod != 0:
             avg = fileLocMod / totalLOCModified
-            entrophy -= avg * math.log(avg, 2)
+            entropy -= avg * math.log(avg, 2)
 
-    return entrophy
+    return entropy
 
 
 def check_fix(msg):
@@ -238,27 +235,33 @@ def calu_modified_lines(file):
     return add_line, del_line, t_line
 
 
+LANGUAGE_MAP = {
+    ".py": "Python",
+    ".java": "Java",
+    ".cpp": "C++",
+    ".c": "C",
+    ".js": "JavaScript",
+    ".rb": "Ruby",
+    ".swift": "Swift",
+    ".go": "Go",
+    ".rs": "Rust",
+    ".ts": "TypeScript",
+    ".php": "PHP",
+    ".cs": "C#"
+    # ".h": "C",
+    # Add more extensions and programming languages as needed
+}
+
+
 def get_programming_language(file_path):
     extension = os.path.splitext(file_path)[1].lower()
+    return LANGUAGE_MAP.get(extension, None)
 
-    language_map = {
-        ".py": "Python",
-        ".java": "Java",
-        ".cpp": "C++",
-        ".c": "C",
-        ".js": "JavaScript",
-        ".rb": "Ruby",
-        ".swift": "Swift",
-        ".go": "Go",
-        ".rs": "Rust",
-        ".ts": "TypeScript",
-        ".php": "PHP",
-        ".cc": "C++",
-        # ".h": "C",
-        # Add more extensions and programming languages as needed
-    }
 
-    return language_map.get(extension, None)
+def is_supported_language(language):
+    if language in LANGUAGE_MAP.values():
+        return language
+    print(f"Language '{language}' is not supported")
 
 
 def load_pkl(path):
@@ -285,3 +288,51 @@ def save_pkl(data, path):
 def save_json(data, path):
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
+
+
+def split_sentence(sentence):
+    sentence = (
+        sentence.replace(".", " . ")
+        .replace("_", " ")
+        .replace("@", " @ ")
+        .replace("-", " - ")
+        .replace("~", " ~ ")
+        .replace("%", " % ")
+        .replace("^", " ^ ")
+        .replace("&", " & ")
+        .replace("*", " * ")
+        .replace("(", " ( ")
+        .replace(")", " ) ")
+        .replace("+", " + ")
+        .replace("=", " = ")
+        .replace("{", " { ")
+        .replace("}", " } ")
+        .replace("|", " | ")
+        .replace("\\", " \ ")
+        .replace("[", " [ ")
+        .replace("]", " ] ")
+        .replace(":", " : ")
+        .replace(";", " ; ")
+        .replace(",", " , ")
+        .replace("<", " < ")
+        .replace(">", " > ")
+        .replace("?", " ? ")
+        .replace("/", " / ")
+    )
+    sentence = " ".join(sentence.split())
+    return sentence
+
+
+def create_dict(messages, codes):
+    msg_dict = Dict(lower=True)
+    code_dict = Dict(lower=True)
+    for mes in messages:
+        for word in mes.split():
+            msg_dict.add(word)
+    for code in codes:
+        for line in code:
+            for word in line.split():
+                code_dict.add(word)
+    msg_dict.prune(100000)
+    code_dict.prune(100000)
+    return [msg_dict.get_dict(), code_dict.get_dict()]

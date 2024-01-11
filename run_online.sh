@@ -1,1 +1,0 @@
-python3 main.py  --mode online   --github_token_path $1   --github_owner $2  --github_repo $3  --to_csv True --extract_features True

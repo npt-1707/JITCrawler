@@ -1,26 +1,50 @@
-import argparse
-from RepositoryExtractor import RepositoryExtractor
+from argparse import ArgumentParser
+from model import BasicPipeline
+from utils import is_supported_language
+import os
 
 def get_params():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--save_path", type=str, default="save")
-    parser.add_argument("--mode", type=str, default="local")
-    parser.add_argument("--start", type=str, default=None)
-    parser.add_argument("--end", type=str, default=None)
-    parser.add_argument("--to_csv", type=bool, default=False)
-    parser.add_argument("--local_repo_path", type=str)
-    parser.add_argument("--main_language", type=str)
-    parser.add_argument("--github_repo", type=str)
-    parser.add_argument("--github_owner", type=str)
-    parser.add_argument("--github_token_path", type=str)
-    parser.add_argument("--extract_features", type=bool, default=False)
-    parser.add_argument("--rand_num", type=int, default=0)
-    parser.add_argument("--excepted_ids_path", type=str, default="")
-    parser.add_argument("--ids_path", type=str, default="")
-    parser.add_argument("--num_commits_per_file", type=int, default=5000)
+    parser = ArgumentParser()
+    valid_modes = ["local", "remote"]
+    parser.add_argument("--mode", type=str, default="local", choices=valid_modes)
+    parser.add_argument("--repo_path", type=str, default="repo")
+    parser.add_argument("--repo_name", type=str, required=True)
+    parser.add_argument("--repo_owner", type=str, required=True)
+    parser.add_argument(
+        "--repo_language",
+        type=lambda x: [i  for i in x.split(" ") if is_supported_language(i)] if x else [],
+        default="",
+    )
+    parser.add_argument("--repo_save_path", type=str, default="save")
+    parser.add_argument("--repo_clone_path", type=str, default="repo")
+    parser.add_argument("--repo_clone_url", type=str)
+    parser.add_argument("--extractor_start", type=str, default=None)
+    parser.add_argument("--extractor_end", type=str, default=None)
+    parser.add_argument("--extractor_num_commits_per_file", type=int, default=5000)
+    parser.add_argument("--extractor_save", action="store_true")
+    parser.add_argument("--extractor_force_reextract", action="store_true")
+    parser.add_argument("--pyszz_path", type=str, default="pyszz_v2")
+    parser.add_argument("--pyszz_keep_output", type=int, default=10)
+    valid_pyszz_confs = ["bszz", "pdszz"]
+    parser.add_argument(
+        "--pyszz_conf", type=str, default="bszz", choices=valid_pyszz_confs
+    )
+    parser.add_argument("--processor_save", action="store_true")
+    parser.add_argument("--dataset_save_path", type=str, default="data")
 
     return parser.parse_args()
 
-config = get_params()
-extractor = RepositoryExtractor()
-extractor.config_repo(config)
+def create_default_save_folders():
+    if not os.path.exists("repo"):
+        os.mkdir("repo")
+    if not os.path.exists("save"):
+        os.mkdir("save")
+    if not os.path.exists("dataset"):
+        os.mkdir("dataset")
+
+if __name__ == "__main__":
+    config = get_params()
+    create_default_save_folders()
+    crawler = BasicPipeline(config)
+    crawler.set_repo(config)
+    crawler.run()
