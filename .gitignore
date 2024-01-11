@@ -44,4 +44,9 @@ __pycache__
 save
 repo
 design
-test*
+*test*
+repo
+*.txt
+run*
+pyszz*
+data

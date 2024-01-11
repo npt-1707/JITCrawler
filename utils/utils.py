@@ -1,51 +1,52 @@
 import os
 import math
-from utils.line_parser import parse_lines
-from utils.aggregator import aggregator
 import subprocess
 import re
 import pickle
 import json
+from model.Dict import Dict
 
-
-def clone_repo(clone_path, name, url):
+def clone_repo(clone_path, owner, name, url):
     """
     Clones a repository to the current directory
     """
-    if name not in os.listdir(clone_path):
+    cur_dir = os.getcwd()
+    if owner not in os.listdir(clone_path):
+        os.mkdir(os.path.join(clone_path, owner))
+    os.chdir(os.path.join(clone_path, owner))
+    if name not in os.listdir(os.path.join(clone_path, owner)):
         command = "git clone {}"
-        os.system(command.format(url))
+        exec_cmd(command.format(url))
     else:
         print(f"Existed '{name}' repository")
         command = "git pull"
-        os.system(command)
+        exec_cmd(command)
+    os.chdir(cur_dir)
 
 
 def exec_cmd(command):
     """
     Get ouput of executing a command
     """
-    # pip = os.popen(command)
-    # output = pip.buffer.read().decode(encoding="utf8", errors="ignore")
-    # output = output.strip("\n").split("\n") if output else []
-    # return output
-    result = subprocess.run(command,
-                            shell=True,
-                            capture_output=True,
-                            text=False)
+    result = subprocess.run(command, shell=True, capture_output=True, text=False)
     output = result.stdout.strip(b"\n").split(b"\n") if result.stdout else []
-    output = [
-        line.decode(encoding="utf8", errors="replace") for line in output
-    ]
+    output = [line.decode(encoding="utf8", errors="replace") for line in output]
     return output
 
 
-def get_commit_hashes(end):
+def get_commit_hashes(start=None, end=None):
     """
-    Get commit hashes of a repository before `end`
+    Get commit hashes of a repository between `start` and `end`
     """
-    command = 'git log --all --before={} --no-decorate --no-merges --pretty=format:"%H"'
-    return exec_cmd(command.format(end))
+    if start is None and end is None:
+        command = 'git log --all --no-decorate --no-merges --pretty=format:"%H"'
+    elif start is None:
+        command = f'git log --all --before={end} --no-decorate --no-merges --pretty=format:"%H"'
+    elif end is None:
+        command = f'git log --all --after={start} --no-decorate --no-merges --pretty=format:"%H"'
+    else:
+        command = f'git log --all --after={start} --before={end} --no-decorate --no-merges --pretty=format:"%H"'
+    return exec_cmd(command)
 
 
 def split_diff_log(file_diff_log):
@@ -81,7 +82,7 @@ def process_one_line_blame(log):
         log.remove(log[1])
     log = " ".join(log)
 
-    pattern = r'(\S+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)(.*)'
+    pattern = r"(\S+)\s+(\d+)\s+\((.*?)\s+(\d+)\s+[-+]\d{4}\s+(\d+)\)(.*)"
 
     # Extract the information using the pattern
     match = re.match(pattern, log)
@@ -132,74 +133,6 @@ def get_file_blame(file_blame_log):
     return id2line
 
 
-# def get_commit_info(commit_id, languages=[]):
-#     command = "git show {} --name-only --pretty=format:'%H%n%P%n%an%n%ct%n%s%n%B%n[ALL CHANGE FILES]'"
-#     show_msg = exec_cmd(command.format(commit_id))
-#     show_msg = [msg.strip() for msg in show_msg]
-#     file_index = show_msg.index("[ALL CHANGE FILES]")
-
-#     subject = show_msg[4]
-#     head = show_msg[:5]
-#     commit_msg = show_msg[5:file_index]
-#     # commit_files = show_msg[file_index + 1 :]
-
-#     parent_id = head[1]
-#     author = head[2]
-#     commit_date = head[3]
-#     commit_msg = " ".join(commit_msg)
-
-#     command = "git show {} --pretty=format: --unified=999999999"
-#     diff_log = split_diff_log(exec_cmd(command.format(commit_id)))
-#     commit_diff = {}
-#     commit_blame = {}
-#     files = []
-#     for log in diff_log:
-#         try:
-#             files_diff = aggregator(parse_lines(log))
-#         except:
-#             continue
-#         for file_diff in files_diff:
-#             file_name_a = (file_diff["from"]["file"] if file_diff["rename"]
-#                            or file_diff["from"]["mode"] != "0000000" else
-#                            file_diff["to"]["file"])
-#             file_name_b = (file_diff["to"]["file"] if file_diff["rename"]
-#                            or file_diff["to"]["mode"] != "0000000" else
-#                            file_diff["from"]["file"])
-#             if file_diff["is_binary"] or len(file_diff["content"]) == 0:
-#                 continue
-
-#             if file_diff["from"]["mode"] == "000000000":
-#                 continue
-
-#             if len(languages) > 0:
-#                 file_language = get_programming_language(file_name_b)
-#                 if file_language not in languages:
-#                     continue
-
-#             command = "git blame -t -n -l {} '{}'"
-#             file_blame_log = exec_cmd(command.format(parent_id, file_name_a))
-#             if not file_blame_log:
-#                 continue
-#             file_blame = get_file_blame(file_blame_log)
-
-#             commit_blame[file_name_b] = file_blame
-#             commit_diff[file_name_b] = file_diff
-#             files.append(file_name_b)
-
-#     commit = {
-#         "commit_id": commit_id,
-#         "parent_id": parent_id,
-#         "subject": subject,
-#         "commit_msg": commit_msg,
-#         "author": author,
-#         "commit_date": int(commit_date),
-#         "files": files,
-#         "diff": commit_diff,
-#         "blame": commit_blame,
-#     }
-#     return commit
-
-
 def find_file_author(blame, file_path):
     if not file_path in blame:
         return [], []
@@ -229,17 +162,17 @@ def get_subs_dire_name(fileDirs):
     return subsystem, directory, file_name
 
 
-def calc_entrophy(totalLOCModified, locModifiedPerFile):
+def calc_entropy(totalLOCModified, locModifiedPerFile):
     """
-    Calculate the entrophy
+    Calculate the entropy
     """
-    entrophy = 0
+    entropy = 0
     for fileLocMod in locModifiedPerFile:
         if fileLocMod != 0:
             avg = fileLocMod / totalLOCModified
-            entrophy -= avg * math.log(avg, 2)
+            entropy -= avg * math.log(avg, 2)
 
-    return entrophy
+    return entropy
 
 
 def check_fix(msg):
@@ -302,33 +235,33 @@ def calu_modified_lines(file):
     return add_line, del_line, t_line
 
 
+LANGUAGE_MAP = {
+    ".py": "Python",
+    ".java": "Java",
+    ".cpp": "C++",
+    ".c": "C",
+    ".js": "JavaScript",
+    ".rb": "Ruby",
+    ".swift": "Swift",
+    ".go": "Go",
+    ".rs": "Rust",
+    ".ts": "TypeScript",
+    ".php": "PHP",
+    ".cs": "C#"
+    # ".h": "C",
+    # Add more extensions and programming languages as needed
+}
+
+
 def get_programming_language(file_path):
     extension = os.path.splitext(file_path)[1].lower()
+    return LANGUAGE_MAP.get(extension, None)
 
-    language_map = {
-        ".py": "Python",
-        ".java": "Java",
-        ".cpp": "C++",
-        ".c": "C",
-        ".js": "JavaScript",
-        ".rb": "Ruby",
-        ".swift": "Swift",
-        ".go": "Go",
-        ".rs": "Rust",
-        ".ts": "TypeScript",
-        ".php": "PHP",
-        # ".html": "HTML",
-        # ".css": "CSS",
-        # ".pl": "Perl",
-        # ".sh": "Bash",
-        # ".lua": "Lua",
-        # ".sql": "SQL",
-        ".cc": "C++",
-        # ".h": "C",
-        # Add more extensions and programming languages as needed
-    }
 
-    return language_map.get(extension, None)
+def is_supported_language(language):
+    if language in LANGUAGE_MAP.values():
+        return language
+    print(f"Language '{language}' is not supported")
 
 
 def load_pkl(path):
@@ -355,3 +288,51 @@ def save_pkl(data, path):
 def save_json(data, path):
     with open(path, "w") as f:
         json.dump(data, f, indent=4)
+
+
+def split_sentence(sentence):
+    sentence = (
+        sentence.replace(".", " . ")
+        .replace("_", " ")
+        .replace("@", " @ ")
+        .replace("-", " - ")
+        .replace("~", " ~ ")
+        .replace("%", " % ")
+        .replace("^", " ^ ")
+        .replace("&", " & ")
+        .replace("*", " * ")
+        .replace("(", " ( ")
+        .replace(")", " ) ")
+        .replace("+", " + ")
+        .replace("=", " = ")
+        .replace("{", " { ")
+        .replace("}", " } ")
+        .replace("|", " | ")
+        .replace("\\", " \ ")
+        .replace("[", " [ ")
+        .replace("]", " ] ")
+        .replace(":", " : ")
+        .replace(";", " ; ")
+        .replace(",", " , ")
+        .replace("<", " < ")
+        .replace(">", " > ")
+        .replace("?", " ? ")
+        .replace("/", " / ")
+    )
+    sentence = " ".join(sentence.split())
+    return sentence
+
+
+def create_dict(messages, codes):
+    msg_dict = Dict(lower=True)
+    code_dict = Dict(lower=True)
+    for mes in messages:
+        for word in mes.split():
+            msg_dict.add(word)
+    for code in codes:
+        for line in code:
+            for word in line.split():
+                code_dict.add(word)
+    msg_dict.prune(100000)
+    code_dict.prune(100000)
+    return [msg_dict.get_dict(), code_dict.get_dict()]
