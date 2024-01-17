@@ -4,7 +4,7 @@ import subprocess
 import re
 import pickle
 import json
-from model.Dict import Dict
+from src.Dict import Dict
 
 def clone_repo(clone_path, owner, name, url):
     """

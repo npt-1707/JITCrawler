@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from model import BasicPipeline
+from src import BasicPipeline
 from utils import is_supported_language
 import os
 

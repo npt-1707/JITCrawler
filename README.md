@@ -1,6 +1,6 @@
-# JIT-DP Data Crawling Tool
+# JITCrawler
 
-A tool crawls codes and features data for JIT-DP problem for different approaches.
+A JIT-DP data crawling tool that collects codes and features data for JIT-DP problem for different approaches.
 
 ## Requirements
 
