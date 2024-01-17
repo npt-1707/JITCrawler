@@ -29,7 +29,7 @@ Also notice to check for requirement of PySZZ.
 │   ├── Extractor.py // A tool for extracting information from git repository
 │   ├── Labeler.py // A PySZZ wrapper for labeling extracted data
 │   ├── Pipeline.py // A complete pipeline for creating a JITDP dataset
-│   ├── Processor.py // A tool for processing extracted data t and formating to JITDP models' input format
+│   ├── Processor.py // A tool for processing extracted data t and formating to JITDP models input format
 │   ├── Repository.py // A repository wrapper
 │   ├── Splitter.py // A tool for splitting processed data
 ├── utils
@@ -45,19 +45,21 @@ Also notice to check for requirement of PySZZ.
 
 A sample structure of extracted data:
 ```bash
+.
 ├── save
 |   ├── repo_name
 |   |   ├── commit_ids.pkl
 |   |   ├── etracted_info.json // the config for Extractor
 |   |   ├── repo_bug_fix.json // the bug_fix file for running PySZZ
-|   |   ├── repo_commits_{num}.pkl // files storing commits' information
-|   |   ├── repo_features.pkl // files storing commits' features
+|   |   ├── repo_commits_{num}.pkl // files storing commits information
+|   |   ├── repo_features.pkl // files storing commits features
 ```
 
 ### Processed Data's folder structure
 
 A sample structure of processed data:
 ```bash
+.
 ├── dataset
 |   ├── repo_name
 |   |   ├── commits
@@ -73,11 +75,12 @@ A sample structure of processed data:
 
 In case this tool is run on `mode="local"`, please follow this repository's structure paths:
 ```bash
+.
 ├── repo_path
 |   ├── repo_owner
 |   |   ├── repo_name
 |   |   |   ├── .git
-|   |   |   ├── other repo's content
+|   |   |   ├── other repo content
 ```
 
 ## Run:
