@@ -4,11 +4,11 @@ A JIT-DP data crawling tool that collects codes and features data for JIT-DP pro
 
 ## Requirements
 
-This tool utilize the code of (PySZZ)[https://github.com/grosa1/pyszz_v2/]. Please install PySZZ and pass its path as a parameter when the code in [Run](#run).
+This tool utilize the code of [PySZZ](https://github.com/grosa1/pyszz_v2/). Please install PySZZ and pass its path as a parameter when the code in [Run](#run).
 
 **Notice**: to run PySZZ:
 - Python 3.9
-- srcML (https://www.srcml.org/) (i.e., the srcml command should be in the system path)
+- [srcML](https://www.srcml.org/) (i.e., the srcml command should be in the system path)
 
 ## Setup:
 

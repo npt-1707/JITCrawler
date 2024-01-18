@@ -29,7 +29,8 @@ class PySZZ:
     def get_conf(self):
         return f"conf/{self.conf}.yml"
 
-    def run(self, bug_fix_path, conf, repo_path, repo_language):
+    def run(self, bug_fix_path, repo_path, repo_language):
+        conf = self.get_conf()
         cur_dir = os.getcwd()
         os.chdir(self.path)
 
@@ -37,7 +38,7 @@ class PySZZ:
         base_conf = yaml.load(self.base_bzz_conf, Loader=yaml.FullLoader)
         if repo_language:
             base_conf["file_ext_to_parse"] = repo_language
-        with open(self.get_conf(), "w") as f:
+        with open(conf, "w") as f:
             yaml.dump(base_conf, f)
 
         # remove historical output

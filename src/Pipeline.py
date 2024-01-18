@@ -64,12 +64,11 @@ class BasicPipeline:
 
         # run pyszz
         print("Running PySZZ...")
-        # self.pyszz.run(
-        #     self.repo.get_bug_fix_path(),
-        #     self.pyszz.get_conf(),
-        #     self.repo.get_repo_path(),
-        #     self.repo.get_language()
-        # )
+        self.pyszz.run(
+            self.repo.get_bug_fix_path(),
+            self.repo.get_repo_path(),
+            self.repo.get_language()
+        )
         szz_output = self.pyszz.get_lastest_output()
         print("PySZZ output: {}".format(len(szz_output)))
 
