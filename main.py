@@ -30,7 +30,7 @@ def get_params():
         "--pyszz_conf", type=str, default="bszz", choices=valid_pyszz_confs
     )
     parser.add_argument("--processor_save", action="store_true")
-    parser.add_argument("--dataset_save_path", type=str, default="data")
+    parser.add_argument("--dataset_save_path", type=str, default="dataset")
 
     return parser.parse_args()
 
