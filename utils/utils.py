@@ -14,7 +14,8 @@ def clone_repo(clone_path, owner, name, url):
     if owner not in os.listdir(clone_path):
         os.mkdir(os.path.join(clone_path, owner))
     os.chdir(os.path.join(clone_path, owner))
-    if name not in os.listdir(os.path.join(clone_path, owner)):
+    if name not in os.listdir():
+        print(f"Cloning ... {url}")
         command = "git clone {}"
         exec_cmd(command.format(url))
     else:

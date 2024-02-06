@@ -59,6 +59,8 @@ class PySZZ:
         return data
 
     def remove_historical_output(self):
+        if "out" not in self.path:
+            return
         output_files = os.listdir(os.path.join(self.path, "out"))
         sorted_output_files = sorted(
             output_files,
