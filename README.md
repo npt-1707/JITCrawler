@@ -28,7 +28,6 @@ Also notice to check for requirement of PySZZ.
 │   ├── Dict.py
 │   ├── Extractor.py // A tool for extracting information from git repository
 │   ├── Labeler.py // A PySZZ wrapper for labeling extracted data
-│   ├── Pipeline.py // A complete pipeline for creating a JITDP dataset
 │   ├── Processor.py // A tool for processing extracted data t and formating to JITDP models input format
 │   ├── Repository.py // A repository wrapper
 │   ├── Splitter.py // A tool for splitting processed data
@@ -37,6 +36,7 @@ Also notice to check for requirement of PySZZ.
 ├── save // default folder for saving extracted data
 ├── repo // default folder for cloning github repository
 ├── .gitignore
+├── Pipeline.py // A complete pipeline for creating a JITDP dataset
 ├── main.py
 ├── README.md
 ```

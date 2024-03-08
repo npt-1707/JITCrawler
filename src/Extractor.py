@@ -18,7 +18,6 @@ class Extractor:
     ):
         self.start = start
         self.end = end
-        self.date = int(time.time())
         self.num_commits_per_file = num_commits_per_file
         self.last_file_num_commits = 0
         self.num_files = 0
@@ -63,6 +62,7 @@ class Extractor:
         self.repo.save_config(config)
 
     def run(self):
+        self.date = int(time.time())
         cur_dir = os.getcwd()
         os.chdir(self.repo.get_path())
         found_ids = self.extract_repo_commit_ids()[::-1]
@@ -83,7 +83,7 @@ class Extractor:
         """
         return get_commit_hashes(self.start, self.end)
 
-    def extract_one_commit_diff(self, commit_id: str, languages: []):
+    def extract_one_commit_diff(self, commit_id: str, languages=[]):
         """
         Input:
             commit_id: the id of the commit
@@ -176,7 +176,7 @@ class Extractor:
         extracting_ids = [id for id in self.repo.ids if self.repo.ids[id] == -1]
         if len(extracting_ids) == 0:
             return
-        bug_fix_ids = []
+        bug_fix_ids = self.repo.load_bug_fix_ids()
         if self.last_file_num_commits > 0:
             self.repo.load_commits(self.num_files)
 
@@ -189,7 +189,7 @@ class Extractor:
                 self.repo.commits[commit_id] = commit
                 self.repo.ids[commit_id] = self.num_files
                 self.last_file_num_commits += 1
-                if check_fix(commit["message"]):
+                if check_fix(commit["message"]) and commit_id not in bug_fix_ids:
                     bug_fix_ids.append(commit_id)
             except Exception:
                 self.repo.ids[commit_id] = -3

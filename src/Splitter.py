@@ -1,6 +1,6 @@
-from .Processor import create_dict, Processor
-from .Repository import Repository
-from utils import save_pkl, create_dict
+from .Processor import Processor
+from .Dict import create_dict
+from utils import save_pkl
 import pandas as pd
 import numpy as np
 import os
@@ -38,9 +38,13 @@ class Splitter:
         start = part_map[part]["start"]
         end = part_map[part]["end"]
         train_indexes = indexes[start * chunk_size : end * chunk_size]
-        assert (train_indexes == np.sort(train_indexes)).all(), "Train indexes are not sorted"
+        assert (
+            train_indexes == np.sort(train_indexes)
+        ).all(), "Train indexes are not sorted"
         test_indexes = indexes[end * chunk_size :]
-        assert (test_indexes == np.sort(test_indexes)).all(), "Test indexes are not sorted"
+        assert (
+            test_indexes == np.sort(test_indexes)
+        ).all(), "Test indexes are not sorted"
         return {
             "train": train_indexes,
             "test": test_indexes,
@@ -54,7 +58,9 @@ class Splitter:
         )
         val_indexes = np.sort(val_indexes)
         train_indexes = np.setdiff1d(indexes["train"], val_indexes)
-        assert (train_indexes == np.sort(train_indexes)).all(), "Train indexes are not sorted"
+        assert (
+            train_indexes == np.sort(train_indexes)
+        ).all(), "Train indexes are not sorted"
         indexes["val"] = val_indexes
         indexes["train"] = train_indexes
         return indexes
@@ -88,25 +94,17 @@ class Splitter:
                 train_dict = create_dict(messages, deepjit_codes)
                 save_pkl(
                     train_dict,
-                    os.path.join(
-                        self.processor.commit_path, f"{save_part}_dict.pkl"
-                    ),
+                    os.path.join(self.processor.commit_path, f"{save_part}_dict.pkl"),
                 )
             save_pkl(
                 [ids, messages, cc2vec_codes, labels],
-                os.path.join(
-                    self.processor.commit_path, f"cc2vec_{save_part}.pkl"
-                ),
+                os.path.join(self.processor.commit_path, f"cc2vec_{save_part}.pkl"),
             )
             save_pkl(
                 [ids, messages, deepjit_codes, labels],
-                os.path.join(
-                    self.processor.commit_path, f"deepjit_{save_part}.pkl"
-                ),
+                os.path.join(self.processor.commit_path, f"deepjit_{save_part}.pkl"),
             )
             save_pkl(
                 [ids, messages, simcom_codes, labels],
-                os.path.join(
-                    self.processor.commit_path, f"simcom_{save_part}.pkl"
-                ),
+                os.path.join(self.processor.commit_path, f"simcom_{save_part}.pkl"),
             )

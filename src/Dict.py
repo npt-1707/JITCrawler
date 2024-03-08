@@ -105,3 +105,18 @@ class Dict(object):
             newDict.add(self.idxToLabel[i])
 
         return newDict
+
+
+def create_dict(messages, codes):
+    msg_dict = Dict(lower=True)
+    code_dict = Dict(lower=True)
+    for mes in messages:
+        for word in mes.split():
+            msg_dict.add(word)
+    for code in codes:
+        for line in code:
+            for word in line.split():
+                code_dict.add(word)
+    msg_dict.prune(100000)
+    code_dict.prune(100000)
+    return [msg_dict.get_dict(), code_dict.get_dict()]

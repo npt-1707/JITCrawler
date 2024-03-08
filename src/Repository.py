@@ -31,16 +31,16 @@ class Repository:
         self.save_path = os.path.abspath(save_path)
         self.repo_path = os.path.abspath(repo_path)
         self.language = language
-        if not os.path.exists(os.path.join(self.save_path, self.name)):
-            os.mkdir(os.path.join(self.save_path, self.name))
+        if not os.path.exists(os.path.join(self.save_path, self.owner, self.name)):
+            os.makedirs(os.path.join(self.save_path, self.owner, self.name))
         self.paths = {
             "extracted_info": os.path.join(
-                self.save_path, self.name, "extracted_info.json"
+                self.save_path, self.owner, self.name, "extracted_info.json"
             ),
-            "ids": os.path.join(self.save_path, self.name, "commit_ids.pkl"),
-            "commits": os.path.join(self.save_path, self.name, "repo_commits_{}.pkl"),
-            "features": os.path.join(self.save_path, self.name, "repo_features.pkl"),
-            "bug_fix": os.path.join(self.save_path, self.name, "repo_bug_fix.json"),
+            "ids": os.path.join(self.save_path, self.owner, self.name, "commit_ids.pkl"),
+            "commits": os.path.join(self.save_path, self.owner, self.name, "repo_commits_{}.pkl"),
+            "features": os.path.join(self.save_path, self.owner, self.name, "repo_features.pkl"),
+            "bug_fix": os.path.join(self.save_path, self.owner, self.name, "repo_bug_fix.json"),
         }
         self.ids = {}
         self.commits = {}
@@ -55,6 +55,9 @@ class Repository:
 
     def load_features(self):
         self.features = load_pkl(self.paths["features"])
+        
+    def load_bug_fix_ids(self):
+        return load_json(self.paths["bug_fix"])
 
     # get
     def get_last_config(self):
@@ -101,7 +104,7 @@ class Repository:
         for id in ids:
             if id not in existed_ids:
                 bug_fix.append(
-                    {"fix_commit_hash": id, "repo_name": f"{self.owner}/{self.name}"}
+                    {"fix_commit_hash": id, "repo_name": os.path.join(self.owner, self.name)}
                 )
         save_json(bug_fix, self.paths["bug_fix"])
 

@@ -1,8 +1,4 @@
-from .Repository import Repository
-from .Extractor import Extractor
-from .Labeler import PySZZ
-from .Processor import Processor
-from .Splitter import Splitter
+from src import Repository, Extractor, Processor, PySZZ, Splitter
 from utils import clone_repo
 
 
@@ -75,7 +71,7 @@ class BasicPipeline:
         # process data
         print("Processing information...")
         self.processor.set_repo(self.repo)
-        self.processor.run(szz_output)
+        self.processor.run(szz_output, self.extractor.end)
         
         # split data
         print("Splitting data...")

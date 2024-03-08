@@ -1,6 +1,8 @@
 from .Repository import Repository
-from .Dict import Dict
-from utils import save_pkl, split_sentence, create_dict
+from .Dict import create_dict
+from utils import save_pkl, split_sentence
+from datetime import datetime
+import time
 import pandas as pd
 import numpy as np
 import os
@@ -10,9 +12,11 @@ class Processor:
     def __init__(self, save_path: str, save: bool = True):
         self.path = os.path.abspath(save_path)
         self.save = save
-        self.repo = None
-        self.feature_path = None
-        self.commit_path = None
+
+    def set_repo(self, repo: Repository):
+        self.repo = repo
+        self.feature_path = os.path.join(self.path, self.repo.name, "feature")
+        self.commit_path = os.path.join(self.path, self.repo.name, "commit")
         self.df = None
         self.ids = None
         self.messages = None
@@ -21,15 +25,21 @@ class Processor:
         self.simcom_codes = None
         self.labels = None
 
-    def set_repo(self, repo: Repository):
-        self.repo = repo
-        self.feature_path = os.path.join(self.path, self.repo.name, "feature")
-        self.commit_path = os.path.join(self.path, self.repo.name, "commit")
-
-    def run(self, szz_output):
+    def run(self, szz_output, extracted_date):
         self.create_dirs()
         szz_bug_ids = self.process_szz_output(szz_output)
-        self.process_features(szz_bug_ids)
+        time_upper_limit = 0
+        if szz_bug_ids:
+            date_df = self.process_features(szz_bug_ids, cols=["_id", "date"])
+            time_median = self.cal_median_fix_time(szz_bug_ids)
+            time_upper_limit = (
+                datetime.strptime(extracted_date, "%Y-%m-%d").timestamp()
+                if extracted_date
+                else int(time.time())
+            )
+            time_upper_limit -= time_median
+
+        self.df = self.process_features(szz_bug_ids, time_upper_limit)
         self.process_diffs(szz_bug_ids)
         if self.save:
             self.to_dataset()
@@ -49,20 +59,20 @@ class Processor:
         """
         Process szz output to get bug ids
         """
+        szz_bug_ids = {}
         if szz_output:
             repo_name = szz_output[0]["repo_name"]
             assert (
                 repo_name == f"{self.repo.owner}/{self.repo.name}"
             ), f"Unmatch szz output vs repo's info: got {repo_name} and {self.repo.owner}/{self.repo.name}"
-            szz_bug_ids = set()
             for out in szz_output:
                 for id in out["inducing_commit_hash"]:
-                    szz_bug_ids.add(id)
-        else:
-            szz_bug_ids = set()
+                    szz_bug_ids[id] = szz_bug_ids.get(id, []).append(
+                        out["fix_commit_hash"]
+                    )
         return szz_bug_ids
 
-    def process_features(self, bug_ids):
+    def process_features(self, bug_ids, cols=[], time_upper_limit=None):
         """
         Convert features to dataframe, and add bug label
         """
@@ -73,45 +83,53 @@ class Processor:
 
         self.repo.load_features()
         assert is_sorted_by_date(self.repo.features), "Features are not sorted by date"
-        data = {
-            "_id": [],
-            "date": [],
-            "bug": [],
-            "ns": [],
-            "nd": [],
-            "nf": [],
-            "entropy": [],
-            "la": [],
-            "ld": [],
-            "lt": [],
-            "fix": [],
-            "ndev": [],
-            "age": [],
-            "nuc": [],
-            "exp": [],
-            "rexp": [],
-            "sexp": [],
-        }
+        if not cols:
+            cols = [
+                "_id",
+                "date",
+                "bug",
+                "ns",
+                "nd",
+                "nf",
+                "entropy",
+                "la",
+                "ld",
+                "lt",
+                "fix",
+                "ndev",
+                "age",
+                "nuc",
+                "exp",
+                "rexp",
+                "sexp",
+            ]
+        data = {key: [] for key in cols}
         for commit_id in self.repo.features:
             feature = self.repo.features[commit_id]
-            data["_id"].append(feature["_id"])
-            data["date"].append(feature["date"])
-            data["bug"].append(1 if feature["_id"] in bug_ids else 0)
-            data["ns"].append(feature["ns"])
-            data["nd"].append(feature["nd"])
-            data["nf"].append(feature["nf"])
-            data["entropy"].append(feature["entropy"])
-            data["la"].append(feature["la"])
-            data["ld"].append(feature["ld"])
-            data["lt"].append(feature["lt"])
-            data["fix"].append(feature["fix"])
-            data["ndev"].append(feature["ndev"])
-            data["age"].append(feature["age"])
-            data["nuc"].append(feature["nuc"])
-            data["exp"].append(feature["exp"])
-            data["rexp"].append(feature["rexp"])
-            data["sexp"].append(feature["sexp"])
-        self.df = pd.DataFrame(data)
+            if time_upper_limit and feature["date"] > time_upper_limit:
+                continue
+            for key in cols:
+                if key == "bug":
+                    data[key].append(1 if commit_id in bug_ids else 0)
+                else:
+                    data[key].append(feature[key])
+        self.repo.features = {}
+        return pd.DataFrame(data)
+
+    def cal_median_fix_time(self, bug_ids):
+        """
+        Calculate median fix time for each bug
+        """
+        fix_times = []
+        for bug_id, fix_ids in bug_ids.items():
+            bug_date = self.df[self.df["_id"] == bug_id]["date"].values[0]
+            fix_dates = self.df[self.df["_id"].isin(fix_ids)]["date"].values
+            for fix_date in fix_dates:
+                fix_time = fix_date - bug_date
+                fix_time = fix_time / 86400
+                fix_times.append(fix_time)
+        time_median = np.median(fix_times)
+        return time_median
 
     def process_diffs(self, bug_ids):
         """

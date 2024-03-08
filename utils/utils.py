@@ -4,12 +4,13 @@ import subprocess
 import re
 import pickle
 import json
-from src.Dict import Dict
 
-def clone_repo(clone_path, owner, name, url):
+
+def clone_repo(clone_path: str, owner: str, name: str, url: str):
     """
     Clones a repository to the current directory
     """
+    assert owner and name and url, "Invalid repository info"
     cur_dir = os.getcwd()
     if owner not in os.listdir(clone_path):
         os.mkdir(os.path.join(clone_path, owner))
@@ -25,7 +26,7 @@ def clone_repo(clone_path, owner, name, url):
     os.chdir(cur_dir)
 
 
-def exec_cmd(command):
+def exec_cmd(command: str):
     """
     Get ouput of executing a command
     """
@@ -37,7 +38,7 @@ def exec_cmd(command):
 
 def get_commit_hashes(start=None, end=None):
     """
-    Get commit hashes of a repository between `start` and `end`
+    Get commit hashes of a repository between `start` and `end` in the format of '%Y-%m-%d'
     """
     if start is None and end is None:
         command = 'git log --all --no-decorate --no-merges --pretty=format:"%H"'
@@ -248,7 +249,7 @@ LANGUAGE_MAP = {
     ".rs": "Rust",
     ".ts": "TypeScript",
     ".php": "PHP",
-    ".cs": "C#"
+    ".cs": "C#",
     # ".h": "C",
     # Add more extensions and programming languages as needed
 }
@@ -322,18 +323,3 @@ def split_sentence(sentence):
     )
     sentence = " ".join(sentence.split())
     return sentence
-
-
-def create_dict(messages, codes):
-    msg_dict = Dict(lower=True)
-    code_dict = Dict(lower=True)
-    for mes in messages:
-        for word in mes.split():
-            msg_dict.add(word)
-    for code in codes:
-        for line in code:
-            for word in line.split():
-                code_dict.add(word)
-    msg_dict.prune(100000)
-    code_dict.prune(100000)
-    return [msg_dict.get_dict(), code_dict.get_dict()]
