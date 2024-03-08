@@ -1,4 +1,4 @@
-from src import Repository, Extractor, Processor, PySZZ, Splitter
+from core import Repository, Extractor, Processor, PySZZ, Splitter
 from utils import clone_repo
 
 

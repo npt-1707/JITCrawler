@@ -121,3 +121,28 @@ class Repository:
         for key, val in config.items():
             cfg[key] = val
         save_json(cfg, self.paths["extracted_info"])
+
+    def get_commits(self, commit_ids: list):
+        """
+        Get commits from repository
+        """
+        if not self.ids:
+            self.load_ids()
+        
+        infos = []
+        features = []
+        found_ids = {}
+        not_found_ids = []
+        for id in commit_ids:
+            if id not in self.ids or (id in self.ids and self.ids[id] < 0):
+                not_found_ids.append(id)
+                continue
+            found_ids[id] = self.ids[id]
+        file_nums = list(set(found_ids.values()))
+        for file_num in file_nums:
+            self.load_commits(file_num)
+            for id, num in found_ids.items():
+                if num == file_num:
+                    infos.append(self.commits[id])
+                    features.append(self.features[id])  
+            
