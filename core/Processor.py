@@ -149,9 +149,13 @@ class Processor:
         self.simcom_codes = []
         self.labels = []
 
+        df_ids = self.df["_id"].values
+        
         for i in range(num_files):
             self.repo.load_commits(i)
             for commit_id in self.repo.commits:
+                if commit_id not in df_ids:
+                    continue
                 commit = self.repo.commits[commit_id]
                 (
                     id,
