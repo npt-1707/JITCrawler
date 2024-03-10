@@ -176,7 +176,7 @@ class Extractor:
         extracting_ids = [id for id in self.repo.ids if self.repo.ids[id] == -1]
         if len(extracting_ids) == 0:
             return
-        bug_fix_ids = self.repo.load_bug_fix_ids()
+        bug_fix_ids = []
         if self.last_file_num_commits > 0:
             self.repo.load_commits(self.num_files)
 
@@ -189,7 +189,7 @@ class Extractor:
                 self.repo.commits[commit_id] = commit
                 self.repo.ids[commit_id] = self.num_files
                 self.last_file_num_commits += 1
-                if check_fix(commit["message"]) and commit_id not in bug_fix_ids:
+                if check_fix(commit["message"]):
                     bug_fix_ids.append(commit_id)
             except Exception:
                 self.repo.ids[commit_id] = -3

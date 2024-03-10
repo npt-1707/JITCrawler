@@ -56,8 +56,8 @@ class Repository:
     def load_features(self):
         self.features = load_pkl(self.paths["features"])
         
-    def load_bug_fix_ids(self):
-        return load_json(self.paths["bug_fix"])
+    # def load_bug_fix_ids(self):
+    #     return load_json(self.paths["bug_fix"])
 
     # get
     def get_last_config(self):

@@ -15,8 +15,9 @@ class Processor:
 
     def set_repo(self, repo: Repository):
         self.repo = repo
-        self.feature_path = os.path.join(self.path, self.repo.name, "feature")
-        self.commit_path = os.path.join(self.path, self.repo.name, "commit")
+        self.repo_save_path = os.path.join(self.path, self.repo.owner, self.repo.name)
+        self.feature_path = os.path.join(self.repo_save_path, "feature")
+        self.commit_path = os.path.join(self.repo_save_path, "commit")
         self.df = None
         self.ids = None
         self.messages = None
@@ -35,7 +36,8 @@ class Processor:
             time_upper_limit = (
                 datetime.strptime(extracted_date, "%Y-%m-%d").timestamp()
                 if extracted_date
-                else int(time.time())
+                else int
+                (time.time())
             )
             time_upper_limit -= time_median
 
@@ -48,8 +50,8 @@ class Processor:
         """
         Create directories for storing data
         """
-        if not os.path.exists(os.path.join(self.path, self.repo.name)):
-            os.mkdir(os.path.join(self.path, self.repo.name))
+        if not os.path.exists(self.repo_save_path):
+            os.makedirs(self.repo_save_path)
         if not os.path.exists(self.feature_path):
             os.mkdir(self.feature_path)
         if not os.path.exists(self.commit_path):
@@ -217,22 +219,22 @@ class Processor:
         Save processed data to dataset
         """
         self.df.to_csv(
-            os.path.join(self.path, self.repo.name, "feature", "features.csv"),
+            os.path.join(self.feature_path, "features.csv"),
             index=False,
         )
         code_msg_dict = create_dict(self.messages, self.deepjit_codes)
         save_pkl(
-            code_msg_dict, os.path.join(self.path, self.repo.name, "commit", "dict.pkl")
+            code_msg_dict, os.path.join(self.commit_path, "dict.pkl")
         )
         save_pkl(
             [self.ids, self.messages, self.cc2vec_codes, self.labels],
-            os.path.join(self.path, self.repo.name, "commit", "cc2vec.pkl"),
+            os.path.join(self.commit_path, "cc2vec.pkl"),
         )
         save_pkl(
             [self.ids, self.messages, self.deepjit_codes, self.labels],
-            os.path.join(self.path, self.repo.name, "commit", "deepjit.pkl"),
+            os.path.join(self.commit_path, "deepjit.pkl"),
         )
         save_pkl(
             [self.ids, self.messages, self.simcom_codes, self.labels],
-            os.path.join(self.path, self.repo.name, "commit", "simcom.pkl"),
+            os.path.join(self.commit_path, "simcom.pkl"),
         )
