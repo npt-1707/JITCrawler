@@ -12,14 +12,23 @@ class BasicPipeline:
             language=cfg.repo_language,
             save=cfg.extractor_save,
             force_reextract=cfg.extractor_force_reextract,
+            check_uncommit=cfg.extractor_check_uncommit,
         )
 
         # init pyszz
-        self.pyszz = PySZZ(pyszz_path=cfg.pyszz_path, keep_output=cfg.pyszz_keep_output)
+        self.pyszz = PySZZ(
+            pyszz_path=cfg.pyszz_path,
+            log_path=cfg.pyszz_log_path,
+            pyszz_conf=cfg.pyszz_conf,
+            keep_output=cfg.pyszz_keep_output,
+        )
 
         # init processor
-        self.processor = Processor(save_path=cfg.dataset_save_path, save=cfg.processor_save)
-        
+        self.processor = Processor(
+            save_path=cfg.dataset_save_path,
+            save=cfg.processor_save,
+        )
+
         # init splitter
         self.splitter = Splitter(save_path=cfg.dataset_save_path)
 
@@ -41,7 +50,12 @@ class BasicPipeline:
         return repo
 
     def remote_repo(self, cfg):
-        clone_repo(cfg.repo_clone_path, cfg.repo_owner, cfg.repo_name, cfg.repo_clone_url)
+        clone_repo(
+            cfg.repo_clone_path,
+            cfg.repo_owner,
+            cfg.repo_name,
+            cfg.repo_clone_url,
+        )
         repo = Repository(
             cfg.repo_owner,
             cfg.repo_name,
@@ -54,28 +68,30 @@ class BasicPipeline:
     def run(self):
         print("Running repository: {}/{}".format(self.repo.owner, self.repo.name))
         # extract repo
-        # print("Extracting repository...")
         self.extractor.set_repo(self.repo)
         self.extractor.run()
-
         # run pyszz
         print("Running PySZZ...")
         self.pyszz.run(
             self.repo.get_bug_fix_path(),
+            self.repo.get_pyszz_conf_path(self.pyszz.conf),
             self.repo.get_repo_path(),
-            self.repo.get_language()
+            self.repo.get_language(),
         )
-        szz_output = self.pyszz.get_lastest_output()
+        szz_output = self.pyszz.get_lastest_output(
+            self.repo.owner,
+            self.repo.name,
+        )
         print("PySZZ output: {}".format(len(szz_output)))
 
         # process data
         print("Processing information...")
         self.processor.set_repo(self.repo)
         self.processor.run(szz_output, self.extractor.end)
-        
+
         # split data
         print("Splitting data...")
         self.splitter.set_processor(self.processor)
         self.splitter.run()
-        
+
         print("Done")

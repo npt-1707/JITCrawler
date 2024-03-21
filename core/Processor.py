@@ -32,16 +32,16 @@ class Processor:
         time_upper_limit = 0
         if szz_bug_ids:
             date_df = self.process_features(szz_bug_ids, cols=["_id", "date"])
-            time_median = self.cal_median_fix_time(szz_bug_ids)
+            time_median = self.cal_median_fix_time(szz_bug_ids, date_df)
             time_upper_limit = (
                 datetime.strptime(extracted_date, "%Y-%m-%d").timestamp()
                 if extracted_date
-                else int
-                (time.time())
-            )
-            time_upper_limit -= time_median
+                else int(time.time())
+            ) - time_median
 
-        self.df = self.process_features(szz_bug_ids, time_upper_limit)
+        self.df = self.process_features(
+            bug_ids=szz_bug_ids, cols=[], time_upper_limit=time_upper_limit
+        )
         self.process_diffs(szz_bug_ids)
         if self.save:
             self.to_dataset()
@@ -64,14 +64,16 @@ class Processor:
         szz_bug_ids = {}
         if szz_output:
             repo_name = szz_output[0]["repo_name"]
-            assert (
-                repo_name == f"{self.repo.owner}/{self.repo.name}"
+            assert repo_name == os.path.join(
+                self.repo.owner, self.repo.name
             ), f"Unmatch szz output vs repo's info: got {repo_name} and {self.repo.owner}/{self.repo.name}"
             for out in szz_output:
-                for id in out["inducing_commit_hash"]:
-                    szz_bug_ids[id] = szz_bug_ids.get(id, []).append(
-                        out["fix_commit_hash"]
-                    )
+                if out["inducing_commit_hash"]:
+                    for id in out["inducing_commit_hash"]:
+                        if id not in szz_bug_ids:
+                            szz_bug_ids[id] = []
+                        else:
+                            szz_bug_ids[id].append(out["fix_commit_hash"])
         return szz_bug_ids
 
     def process_features(self, bug_ids, cols=[], time_upper_limit=None):
@@ -118,18 +120,19 @@ class Processor:
         self.repo.features = {}
         return pd.DataFrame(data)
 
-    def cal_median_fix_time(self, bug_ids):
+    def cal_median_fix_time(self, bug_ids, date_df):
         """
         Calculate median fix time for each bug
         """
         fix_times = []
         for bug_id, fix_ids in bug_ids.items():
-            bug_date = self.df[self.df["_id"] == bug_id]["date"].values[0]
-            fix_dates = self.df[self.df["_id"].isin(fix_ids)]["date"].values
-            for fix_date in fix_dates:
-                fix_time = fix_date - bug_date
-                fix_time = fix_time / 86400
-                fix_times.append(fix_time)
+            if bug_id in date_df["_id"].values:
+                bug_date = date_df[date_df["_id"] == bug_id]["date"].values[0]
+                fix_dates = date_df[date_df["_id"].isin(fix_ids)]["date"].values
+                for fix_date in fix_dates:
+                    fix_time = fix_date - bug_date
+                    fix_time = fix_time / 86400
+                    fix_times.append(fix_time)
         time_median = np.median(fix_times)
         return time_median
 
@@ -152,7 +155,7 @@ class Processor:
         self.labels = []
 
         df_ids = self.df["_id"].values
-        
+
         for i in range(num_files):
             self.repo.load_commits(i)
             for commit_id in self.repo.commits:
@@ -223,9 +226,7 @@ class Processor:
             index=False,
         )
         code_msg_dict = create_dict(self.messages, self.deepjit_codes)
-        save_pkl(
-            code_msg_dict, os.path.join(self.commit_path, "dict.pkl")
-        )
+        save_pkl(code_msg_dict, os.path.join(self.commit_path, "dict.pkl"))
         save_pkl(
             [self.ids, self.messages, self.cc2vec_codes, self.labels],
             os.path.join(self.commit_path, "cc2vec.pkl"),

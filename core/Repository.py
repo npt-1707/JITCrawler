@@ -25,6 +25,7 @@ class Repository:
         |   |   --repo_commits_<num>.pkl
         |   |   --repo_features.csv
         |   |   --repo_bug_fix.json
+        |   |   --bszz.yml
         """
         self.owner = repo_owner
         self.name = repo_name
@@ -41,10 +42,12 @@ class Repository:
             "commits": os.path.join(self.save_path, self.owner, self.name, "repo_commits_{}.pkl"),
             "features": os.path.join(self.save_path, self.owner, self.name, "repo_features.pkl"),
             "bug_fix": os.path.join(self.save_path, self.owner, self.name, "repo_bug_fix.json"),
+            "pyszz_conf": os.path.join(self.save_path, self.owner, self.name, "{}.yml"),
         }
         self.ids = {}
         self.commits = {}
         self.features = {}
+        self.uncommit = {}
 
     # load
     def load_ids(self):
@@ -55,11 +58,7 @@ class Repository:
 
     def load_features(self):
         self.features = load_pkl(self.paths["features"])
-        
-    # def load_bug_fix_ids(self):
-    #     return load_json(self.paths["bug_fix"])
 
-    # get
     def get_last_config(self):
         config = load_json(self.paths["extracted_info"])
         if config:
@@ -76,6 +75,9 @@ class Repository:
 
     def get_repo_path(self):
         return self.repo_path
+    
+    def get_pyszz_conf_path(self, conf):
+        return self.paths["pyszz_conf"].format(conf)
 
     def get_path(self):
         return os.path.join(self.repo_path, self.owner, self.name)

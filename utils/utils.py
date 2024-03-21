@@ -237,7 +237,7 @@ def calu_modified_lines(file):
     return add_line, del_line, t_line
 
 
-LANGUAGE_MAP = {
+EXT2LANG = {
     ".py": "Python",
     ".java": "Java",
     ".cpp": "C++",
@@ -254,14 +254,16 @@ LANGUAGE_MAP = {
     # Add more extensions and programming languages as needed
 }
 
+LANG2EXT = {v: k for k, v in EXT2LANG.items()}
+
 
 def get_programming_language(file_path):
     extension = os.path.splitext(file_path)[1].lower()
-    return LANGUAGE_MAP.get(extension, None)
+    return EXT2LANG.get(extension, None)
 
 
 def is_supported_language(language):
-    if language in LANGUAGE_MAP.values():
+    if language in LANG2EXT:
         return language
     print(f"Language '{language}' is not supported")
 

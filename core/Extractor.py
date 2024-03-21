@@ -4,7 +4,7 @@ import time
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-
+import datetime
 
 class Extractor:
     def __init__(
@@ -15,6 +15,7 @@ class Extractor:
         language: list = [],
         save: bool = True,
         force_reextract: bool = False,
+        check_uncommit:bool=False,
     ):
         self.start = start
         self.end = end
@@ -24,6 +25,7 @@ class Extractor:
         self.language = language
         self.save = save
         self.force_reextract = force_reextract
+        self.check_uncommit = check_uncommit
 
     def set_repo(self, repo: Repository):
         self.repo = repo
@@ -70,9 +72,11 @@ class Extractor:
         for id in found_ids:
             if id not in self.repo.ids:
                 self.repo.ids[id] = -1
+        self.date = int(time.time())
+        if self.check_uncommit:
+            self.repo.uncommit = {}
         self.extract_repo_commit_diffs()
         self.extract_repo_commits_features()
-        self.date = int(time.time())
         if self.save:
             self.save_config()
         os.chdir(cur_dir)
@@ -200,6 +204,11 @@ class Extractor:
                 self.num_files += 1
                 self.repo.commits = {}
 
+        if self.check_uncommit:
+            uncommit = self.extract_repo_uncommit()
+            if uncommit and uncommit["diff"]:
+                self.repo.uncommit["commit"] = uncommit
+
         if self.save:
             if self.repo.commits:
                 self.repo.save_commits(self.num_files)
@@ -301,7 +310,78 @@ class Extractor:
                     self.repo.commits[commit_id]
                 )
                 self.repo.features[commit_id] = commit_feature
+        if self.check_uncommit:
+            if self.repo.uncommit and self.repo.uncommit["commit"]:
+                commit_feature = self.extract_one_commit_features(
+                    self.repo.uncommit["commit"]
+                )
+                self.repo.uncommit["feature"] = commit_feature
         if self.save:
             self.repo.save_features()
         self.repo.files = {}
         self.repo.authors = {}
+
+    def extract_repo_uncommit(self):
+        command = "git config --get user.name"
+        author = exec_cmd(command)[0]
+
+        command = "git show HEAD --name-only --pretty=format:'%H'"
+        HEAD = exec_cmd(command)[0]
+
+        command = "git diff --pretty=format: --unified=999999999"
+        diff_log = exec_cmd(command)
+        if diff_log == []:
+            return None
+        diff_log = split_diff_log(exec_cmd(command))
+        commit_diff = {}
+        commit_blame = {}
+        files = []
+        languages = self.repo.language
+        for log in diff_log:
+            try:
+                files_diff = aggregator(parse_lines(log))
+            except:
+                continue
+            for file_diff in files_diff:
+                file_name_a = (
+                    file_diff["from"]["file"]
+                    if file_diff["rename"] or file_diff["from"]["mode"] != "0000000"
+                    else file_diff["to"]["file"]
+                )
+                file_name_b = (
+                    file_diff["to"]["file"]
+                    if file_diff["rename"] or file_diff["to"]["mode"] != "0000000"
+                    else file_diff["from"]["file"]
+                )
+                if file_diff["is_binary"] or len(file_diff["content"]) == 0:
+                    continue
+
+                if file_diff["from"]["mode"] == "0000000":
+                    continue
+
+                file_language = get_programming_language(file_name_b)
+                if file_language not in languages:
+                    continue
+
+                command = "git blame -t -n -l {} '{}'"
+                file_blame_log = exec_cmd(command.format(HEAD, file_name_a))
+                if not file_blame_log:
+                    continue
+                file_blame = get_file_blame(file_blame_log)
+
+                commit_blame[file_name_b] = file_blame
+                commit_diff[file_name_b] = file_diff
+                files.append(file_name_b)
+
+        commit = {
+            "commit_id": "uncommit",
+            "parent_id": HEAD,
+            "subject": None,
+            "message": "",
+            "author": author,
+            "date": int(datetime.datetime.now().timestamp()),
+            "files": files,
+            "diff": commit_diff,
+            "blame": commit_blame,
+        }
+        return commit
