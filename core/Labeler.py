@@ -41,6 +41,10 @@ class PySZZ:
         )
         cur_dir = os.getcwd()
         os.chdir(self.path)
+        
+        # create output folder in case it doesn't exist
+        if "out" not in os.listdir(self.path):
+            os.mkdir("out")
 
         # modify config file
         conf = self.base_conf
@@ -52,16 +56,17 @@ class PySZZ:
         with open(szz_conf_path, "w") as f:
             yaml.dump(conf, f)
 
-        # remove historical output
-        self.remove_historical_output()
-
         # run pyszz
         cmd = "python3 main.py {} {} {}".format(bug_fix_path, szz_conf_path, repo_path)
         logging.debug(cmd)
         out = exec_cmd(cmd)
         logging.debug(out)
-        os.chdir(cur_dir)
 
+        # remove historical output
+        self.remove_historical_output()
+        
+        os.chdir(cur_dir)
+        
     def get_outputs(self):
         assert "out" in os.listdir(self.path), "PySZZ: No output folder"
         output_files = [
