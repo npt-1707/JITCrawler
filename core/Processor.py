@@ -72,8 +72,7 @@ class Processor:
                     for id in out["inducing_commit_hash"]:
                         if id not in szz_bug_ids:
                             szz_bug_ids[id] = []
-                        else:
-                            szz_bug_ids[id].append(out["fix_commit_hash"])
+                        szz_bug_ids[id].append(out["fix_commit_hash"])
         return szz_bug_ids
 
     def process_features(self, bug_ids, cols=[], time_upper_limit=None):
