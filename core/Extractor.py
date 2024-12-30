@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import datetime
 
+
 class Extractor:
     def __init__(
         self,
@@ -15,7 +16,7 @@ class Extractor:
         language: list = [],
         save: bool = True,
         force_reextract: bool = False,
-        check_uncommit:bool=False,
+        check_uncommit: bool = False,
     ):
         self.start = start
         self.end = end
@@ -29,11 +30,12 @@ class Extractor:
 
     def set_repo(self, repo: Repository):
         self.repo = repo
+        print("Start extracting!")
         if self.force_reextract:
-            print("Start extracting repository ...")
+            print("Reset extracting process ...")
             self.reset_repo()
         else:
-            print("Continue extracting repository ...")
+            print("Continue extracting process ...")
         self.load_config(repo.get_last_config())
 
     def load_config(self, config):
@@ -174,7 +176,7 @@ class Extractor:
         return commit
 
     def extract_repo_commit_diffs(self):
-        print("Collecting commits information ...")
+        print("Parsing commits information ...")
         if not self.num_commits_per_file:
             self.num_commits_per_file = len(self.repo.ids)
         extracting_ids = [id for id in self.repo.ids if self.repo.ids[id] == -1]
@@ -225,8 +227,8 @@ class Extractor:
 
         la, ld, lt, age, nuc = (0, 0, 0, 0, 0)
         subs, dirs, files = [], [], []
-        totalLOCModified = 0
-        locModifiedPerFile = []
+        total_loc_modified = 0
+        loc_modified_per_file = []
         authors = []
         ages = []
         author_exp = self.repo.authors.get(commit_author, {})
@@ -248,11 +250,11 @@ class Extractor:
             ld += result[1]
             lt += result[2]
 
-            totalLOCModified += la + ld
-            locModifiedPerFile.append(totalLOCModified)
+            total_loc_modified += la + ld
+            loc_modified_per_file.append(total_loc_modified)
 
-            file = self.repo.files.get(file_path, {"author": [], "nuc": 0})
-            file_author = file["author"]
+            file_info = self.repo.files.get(file_path, {"author": [], "nuc": 0})
+            file_author = file_info["author"]
             if commit_author not in file_author:
                 file_author.append(commit_author)
             authors = list(set(authors) | set(file_author))
@@ -262,11 +264,11 @@ class Extractor:
             age = max(age, 0)
             ages.append(age)
 
-            file_nuc = file["nuc"] + 1
+            file_nuc = file_info["nuc"] + 1
             nuc += file_nuc
 
-            file["nuc"] = file_nuc
-            self.repo.files[file_path] = file
+            file_info["nuc"] = file_nuc
+            self.repo.files[file_path] = file_info
 
             if file_path in author_exp:
                 author_exp[file_path].append(commit_date)
@@ -280,7 +282,7 @@ class Extractor:
             "ns": len(subs),
             "nd": len(dirs),
             "nf": len(files),
-            "entropy": calc_entropy(totalLOCModified, locModifiedPerFile),
+            "entropy": calc_entropy(total_loc_modified, loc_modified_per_file),
             "la": la,
             "ld": ld,
             "lt": lt,
@@ -318,8 +320,10 @@ class Extractor:
                 self.repo.uncommit["feature"] = commit_feature
         if self.save:
             self.repo.save_features()
-        self.repo.files = {}
-        self.repo.authors = {}
+            self.repo.save_files_info()
+            self.repo.save_authors_info()
+        # self.repo.files = {}
+        # self.repo.authors = {}
 
     def extract_repo_uncommit(self):
         command = "git config --get user.name"

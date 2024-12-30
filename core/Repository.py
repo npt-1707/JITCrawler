@@ -38,16 +38,32 @@ class Repository:
             "extracted_info": os.path.join(
                 self.save_path, self.owner, self.name, "extracted_info.json"
             ),
-            "ids": os.path.join(self.save_path, self.owner, self.name, "commit_ids.pkl"),
-            "commits": os.path.join(self.save_path, self.owner, self.name, "repo_commits_{}.pkl"),
-            "features": os.path.join(self.save_path, self.owner, self.name, "repo_features.pkl"),
-            "bug_fix": os.path.join(self.save_path, self.owner, self.name, "repo_bug_fix.json"),
+            "ids": os.path.join(
+                self.save_path, self.owner, self.name, "commit_ids.pkl"
+            ),
+            "commits": os.path.join(
+                self.save_path, self.owner, self.name, "repo_commits_{}.pkl"
+            ),
+            "features": os.path.join(
+                self.save_path, self.owner, self.name, "repo_features.pkl"
+            ),
+            "bug_fix": os.path.join(
+                self.save_path, self.owner, self.name, "repo_bug_fix.json"
+            ),
             "pyszz_conf": os.path.join(self.save_path, self.owner, self.name, "{}.yml"),
+            "files": os.path.join(
+                self.save_path, self.owner, self.name, "repo_files.json"
+            ),
+            "authors": os.path.join(
+                self.save_path, self.owner, self.name, "repo_authors.json"
+            ),
         }
         self.ids = {}
         self.commits = {}
         self.features = {}
         self.uncommit = {}
+        self.files = {}
+        self.authors = {}
 
     # load
     def load_ids(self):
@@ -75,7 +91,7 @@ class Repository:
 
     def get_repo_path(self):
         return self.repo_path
-    
+
     def get_pyszz_conf_path(self, conf):
         return self.paths["pyszz_conf"].format(conf)
 
@@ -87,7 +103,7 @@ class Repository:
 
     def get_csv_path(self):
         return self.paths["csv"]
-    
+
     def get_language(self):
         return self.language
 
@@ -106,12 +122,21 @@ class Repository:
         for id in ids:
             if id not in existed_ids:
                 bug_fix.append(
-                    {"fix_commit_hash": id, "repo_name": os.path.join(self.owner, self.name)}
+                    {
+                        "fix_commit_hash": id,
+                        "repo_name": os.path.join(self.owner, self.name),
+                    }
                 )
         save_json(bug_fix, self.paths["bug_fix"])
 
     def save_features(self):
         save_pkl(self.features, self.paths["features"])
+
+    def save_files_info(self):
+        save_json(self.files, self.paths["files"])
+
+    def save_authors_info(self):
+        save_json(self.authors, self.paths["authors"])
 
     def save_config(self, config):
         cfg = {
@@ -124,13 +149,14 @@ class Repository:
             cfg[key] = val
         save_json(cfg, self.paths["extracted_info"])
 
+    # get commits information given a list of commit ids
     def get_commits(self, commit_ids: list):
         """
         Get commits from repository
         """
         if not self.ids:
             self.load_ids()
-        
+
         infos = []
         features = []
         found_ids = {}
@@ -146,5 +172,4 @@ class Repository:
             for id, num in found_ids.items():
                 if num == file_num:
                     infos.append(self.commits[id])
-                    features.append(self.features[id])  
-            
+                    features.append(self.features[id])
